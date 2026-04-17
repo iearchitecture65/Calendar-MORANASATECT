@@ -67,8 +67,6 @@
     <!-- Announcement Popup for Users (Z-Index: 150) -->
     <div id="announcement-modal" class="fixed inset-0 z-[150] items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden fade-in border border-slate-100">
-            
-            <!-- Clean Header -->
             <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100 bg-slate-50">
                 <div class="flex items-center gap-2.5">
                     <div class="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
@@ -80,22 +78,32 @@
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            
-            <!-- Body Content -->
             <div class="flex-1 overflow-y-auto p-5 space-y-4">
                 <p id="annc-display-msg" class="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap"></p>
-                
-                <!-- Linked Event Snippet -->
                 <div id="annc-display-event" class="hidden mt-2">
                     <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> กิจกรรมที่เกี่ยวข้อง</h4>
                     <div id="annc-display-event-card"></div>
                 </div>
             </div>
-            
-            <!-- Footer Button -->
             <div class="p-4 border-t border-slate-100 bg-slate-50/50 text-center">
                 <button onclick="closeAnnouncement()" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm">รับทราบ</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Events Modal (Z-Index: 100) -->
+    <div id="upcoming-modal" class="fixed inset-0 z-[100] items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden fade-in">
+            <div class="flex justify-between items-start p-5 sm:px-6 pt-6 pb-4 border-b border-slate-100">
+                <div>
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2"><i data-lucide="bell" class="text-rose-500 w-5 h-5"></i> กิจกรรมล่วงหน้า</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">พบทั้งหมด <span id="upcoming-total">0</span> รายการที่กำลังมาถึง</p>
+                </div>
+                <button onclick="closeUpcomingModal()" class="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 sm:px-6 pb-6 flex flex-col gap-3" id="upcoming-modal-list"></div>
         </div>
     </div>
 
@@ -202,15 +210,18 @@
                     <div id="today-events-container" class="space-y-2.5 overflow-y-auto pr-1"></div>
                 </div>
 
-                <!-- Upcoming Events -->
-                <div class="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 p-4 sm:p-5 flex flex-col max-h-[280px] lg:max-h-none overflow-hidden text-sm">
-                    <div class="flex items-center gap-2 mb-3 shrink-0">
-                        <div class="p-1.5 bg-rose-50 text-rose-500 rounded-full">
-                            <i data-lucide="bell" class="w-4 h-4"></i>
+                <!-- Upcoming Events (Compact UI with Mask) -->
+                <div class="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 p-4 sm:p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group" onclick="openUpcomingModal()">
+                    <div class="flex items-center justify-between mb-2 shrink-0">
+                        <div class="flex items-center gap-2">
+                            <div class="p-1.5 bg-rose-50 text-rose-500 rounded-full">
+                                <i data-lucide="bell" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-800 text-sm">กิจกรรมที่กำลังมาถึง</h3>
                         </div>
-                        <h3 class="font-bold text-slate-800 text-sm">กิจกรรมที่กำลังมาถึง</h3>
+                        <div class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-full group-hover:bg-indigo-100 transition-colors">ดูทั้งหมด <i data-lucide="external-link" class="w-2.5 h-2.5 inline-block -mt-0.5"></i></div>
                     </div>
-                    <div id="upcoming-events-container" class="space-y-2 pt-1 overflow-y-auto pr-1"></div>
+                    <div id="upcoming-events-container" class="relative overflow-hidden min-h-[100px]"></div>
                 </div>
             </div>
 
@@ -305,7 +316,7 @@
                 </div>
 
                 <!-- Admin Add/Edit Form -->
-                <div id="admin-form-container" class="w-full bg-slate-50/50 p-4 sm:p-5 rounded-xl border border-slate-100 hidden">
+                <div id="admin-form-container" class="w-full bg-slate-50/50 p-4 sm:p-5 rounded-xl border border-slate-100 hidden transition-all">
                     <h4 id="admin-form-title" class="text-sm font-semibold text-slate-800 flex items-center gap-1.5 mb-3">
                         <i data-lucide="plus" class="w-4 h-4 text-indigo-500"></i> เพิ่มนัดหมายใหม่
                     </h4>
@@ -330,16 +341,44 @@
                                 <label class="block text-[10px] sm:text-xs font-medium text-slate-500 mb-1">ถึงวันที่ (ไม่บังคับ)</label>
                                 <input type="date" id="ev-enddate" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                             </div>
-                            <div class="w-[80px]">
-                                <label class="block text-[10px] sm:text-xs font-medium text-slate-500 mb-1 tracking-tighter">สี</label>
-                                <select id="ev-color" class="w-full px-1 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                                    <option value="blue">น้ำเงิน</option>
-                                    <option value="green">เขียว</option>
-                                    <option value="orange">ส้ม</option>
-                                    <option value="red">แดง</option>
-                                    <option value="purple">ม่วง</option>
-                                </select>
+                            
+                            <!-- Custom Color Picker -->
+                            <div class="w-[100px] relative">
+                                <label class="block text-[10px] sm:text-xs font-medium text-slate-500 mb-1 tracking-tighter">สีนัดหมาย</label>
+                                <div id="color-picker-btn" class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm focus:outline-none cursor-pointer flex items-center justify-between shadow-sm" onclick="toggleColorPicker()">
+                                    <div class="flex items-center gap-1.5">
+                                        <div id="selected-color-preview" class="w-3.5 h-3.5 rounded-full" style="background-color: #818cf8;"></div>
+                                        <span id="selected-color-text" class="text-[10px] text-slate-600 font-semibold uppercase">#818CF8</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Color Picker Popover (MS Word Style) -->
+                                <div id="color-picker-popover" class="hidden absolute bottom-full right-0 sm:left-0 sm:right-auto mb-1 bg-white border border-slate-200 shadow-xl rounded-xl p-3 w-56 z-[200]">
+                                    <div class="mb-3">
+                                        <div class="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">สีที่เคยใช้</div>
+                                        <div id="recent-colors" class="flex flex-wrap gap-1.5"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">สีแนะนำ</div>
+                                        <div class="flex flex-wrap gap-1.5">
+                                            <div class="w-5 h-5 rounded-full cursor-pointer border border-slate-200 hover:scale-110 transition-transform shadow-sm" style="background-color: #818cf8;" onclick="selectColor('#818cf8')"></div>
+                                            <div class="w-5 h-5 rounded-full cursor-pointer border border-slate-200 hover:scale-110 transition-transform shadow-sm" style="background-color: #34d399;" onclick="selectColor('#34d399')"></div>
+                                            <div class="w-5 h-5 rounded-full cursor-pointer border border-slate-200 hover:scale-110 transition-transform shadow-sm" style="background-color: #fbbf24;" onclick="selectColor('#fbbf24')"></div>
+                                            <div class="w-5 h-5 rounded-full cursor-pointer border border-slate-200 hover:scale-110 transition-transform shadow-sm" style="background-color: #f87171;" onclick="selectColor('#f87171')"></div>
+                                            <div class="w-5 h-5 rounded-full cursor-pointer border border-slate-200 hover:scale-110 transition-transform shadow-sm" style="background-color: #a78bfa;" onclick="selectColor('#a78bfa')"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">สีอื่นๆ (ดูดสี)</div>
+                                        <label class="flex items-center gap-2 cursor-pointer border border-slate-200 p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                            <input type="color" id="custom-color-input" class="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent" onchange="selectColor(this.value)">
+                                            <span class="text-[10px] font-semibold text-slate-600">เลือกสีแบบกำหนดเอง...</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="ev-color" value="#818cf8">
                             </div>
+
                         </div>
 
                         <!-- Multi-Links Support (Drag & Drop) -->
@@ -483,39 +522,32 @@
         
         // สถานะเกี่ยวกับป๊อปอัปประกาศ
         let popupConfig = { is_active: false, event_id: '', title: '', message: '' };
-        let hasShownPopup = false; // ตัวแปรสำหรับเช็คไม่ให้ป๊อปอัปแสดงซ้ำในการโหลดครั้งเดียวกัน
+        let hasShownPopup = false; 
         let isDataLoaded = { events: false, config: false };
 
         const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
         const engMonths = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
         const thaiDays = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
-        const exportColors = {
-            blue: { bg: '#818cf8', text: '#e0e7ff' },    
-            green: { bg: '#34d399', text: '#d1fae5' },   
-            orange: { bg: '#fbbf24', text: '#fef3c7' },  
-            red: { bg: '#f87171', text: '#fee2e2' },     
-            purple: { bg: '#a78bfa', text: '#ede9fe' }   
-        };
+        
+        // --- ระบบสี (Color System) ---
+        const legacyColors = { blue: '#818cf8', green: '#34d399', orange: '#fbbf24', red: '#f87171', purple: '#a78bfa' };
+        const getHexColor = (c) => legacyColors[c] || c || '#818cf8';
+        let recentColors = ['#818cf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa']; // default recents
 
-        // --- ระบบแจ้งเตือน (Toast) แทน alert() ---
         function showToast(msg, isError = false) {
             const toast = document.createElement('div');
             toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-xl z-[9999] text-sm font-bold text-white transition-all duration-300 transform -translate-y-full opacity-0 flex items-center gap-2 ${isError ? 'bg-rose-500' : 'bg-emerald-500'}`;
             toast.innerHTML = `<i data-lucide="${isError ? 'alert-circle' : 'check-circle'}" class="w-5 h-5"></i> ${escapeHTML(msg)}`;
             document.body.appendChild(toast);
             if(window.lucide) window.lucide.createIcons();
-            
-            // Animate In
             setTimeout(() => toast.classList.remove('-translate-y-full', 'opacity-0'), 10);
-            
-            // Animate Out
             setTimeout(() => {
                 toast.classList.add('-translate-y-full', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // --- Global Functions for HTML exposure ---
+        // --- Global Functions ---
         window.toggleAdminModal = toggleAdminModal;
         window.handlePrevMonth = handlePrevMonth;
         window.handleNextMonth = handleNextMonth;
@@ -534,10 +566,54 @@
         window.handleDeleteEvent = handleDeleteEvent;
         window.openEventView = openEventView;
         window.closeEventView = closeEventView;
-        // Announcement Exposes
         window.closeAnnouncement = closeAnnouncement;
         window.openAdminAnnouncement = openAdminAnnouncement;
         window.closeAdminAnnouncement = closeAdminAnnouncement;
+        window.openUpcomingModal = openUpcomingModal;
+        window.closeUpcomingModal = closeUpcomingModal;
+        
+        // --- Color Picker Function ---
+        window.toggleColorPicker = () => {
+            document.getElementById('color-picker-popover').classList.toggle('hidden');
+            renderRecentColors();
+        };
+
+        window.selectColor = (hex, saveHistory = true) => {
+            document.getElementById('ev-color').value = hex;
+            document.getElementById('selected-color-preview').style.backgroundColor = hex;
+            document.getElementById('selected-color-text').innerText = hex.toUpperCase();
+            document.getElementById('color-picker-popover').classList.add('hidden');
+            document.getElementById('custom-color-input').value = hex;
+            
+            if(saveHistory && !recentColors.includes(hex)) {
+                recentColors.unshift(hex);
+                if(recentColors.length > 10) recentColors.pop();
+                localStorage.setItem('morana_recent_colors', JSON.stringify(recentColors));
+            }
+        };
+
+        function renderRecentColors() {
+            const saved = localStorage.getItem('morana_recent_colors');
+            if(saved) recentColors = JSON.parse(saved);
+            
+            const eventColors = [...new Set(events.map(e => getHexColor(e.color)))].filter(Boolean);
+            eventColors.forEach(c => { if(!recentColors.includes(c)) recentColors.unshift(c); });
+            recentColors = recentColors.slice(0, 10);
+            
+            const container = document.getElementById('recent-colors');
+            if(container) {
+                container.innerHTML = recentColors.map(c => `<div class="w-5 h-5 rounded-full cursor-pointer border border-slate-200 hover:scale-110 transition-transform shadow-sm" style="background-color: ${c}" onclick="selectColor('${c}')"></div>`).join('');
+            }
+        }
+        
+        // ปิด Color Picker เมื่อคลิกด้านนอก
+        document.addEventListener('click', (e) => {
+            const btn = document.getElementById('color-picker-btn');
+            const pop = document.getElementById('color-picker-popover');
+            if(btn && pop && !btn.contains(e.target) && !pop.contains(e.target)) {
+                pop.classList.add('hidden');
+            }
+        });
 
         const getTodayString = () => {
             const d = new Date();
@@ -557,43 +633,18 @@
 
         const escapeHTML = (s) => (s || '').replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t] || t));
 
-        const getColorClasses = (c) => {
-            switch(c) {
-                case 'red': return 'bg-red-50 text-red-700 border-red-200';
-                case 'green': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                case 'purple': return 'bg-purple-50 text-purple-700 border-purple-200';
-                case 'orange': return 'bg-orange-50 text-orange-700 border-orange-200';
-                default: return 'bg-blue-50 text-blue-700 border-blue-200';
-            }
-        };
-
-        const getDotColor = (c) => {
-            switch(c) {
-                case 'red': return 'bg-red-400';
-                case 'green': return 'bg-emerald-400';
-                case 'purple': return 'bg-purple-400';
-                case 'orange': return 'bg-orange-400';
-                default: return 'bg-blue-400';
-            }
-        };
-
-        // ฟังก์ชันจัดการแสดง Popup Announcement เมื่อข้อมูลพร้อม
         function checkAndShowAnnouncement() {
-            if (!isDataLoaded.events || !isDataLoaded.config) return; // รอให้ข้อมูลมาครบทั้ง 2 ก่อน
-            if (hasShownPopup) return; // หากโหลดไปแล้วจะไม่โหลดซ้ำ
+            if (!isDataLoaded.events || !isDataLoaded.config) return; 
+            if (hasShownPopup) return; 
             if (!popupConfig.is_active || String(popupConfig.is_active) === 'false') return;
-            if (!siteActive && !isAdmin) return; // ป้องกันการแสดงป๊อปอัปประกาศ ถ้าเว็บปิดปรับปรุง (ยกเว้นแอดมิน)
+            if (!siteActive && !isAdmin) return; 
             
-            // ตรวจสอบเงื่อนไขถ้าดึงกิจกรรมวันนี้ แล้วไม่มีกิจกรรม ให้ยกเลิกการแสดง
             if (popupConfig.event_id === 'TODAY_EVENTS') {
                 const todayStr = getTodayString();
                 const todayEvs = events.filter(e => isDateInRange(todayStr, e.date, e.endDate));
-                if (todayEvs.length === 0) {
-                    return; // ออกจากการทำงาน ไม่แสดงประกาศ
-                }
+                if (todayEvs.length === 0) return; 
             }
             
-            // นำข้อมูลไปใส่ใน Modal แจ้งเตือน
             document.getElementById('annc-display-title').innerText = popupConfig.title || 'ประกาศจากระบบ';
             document.getElementById('annc-display-msg').innerText = popupConfig.message || '';
             
@@ -605,7 +656,7 @@
                 const todayEvs = events.filter(e => isDateInRange(todayStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
                 
                 eventSnippet.classList.remove('hidden');
-                eventCardContainer.className = ""; // เคลียร์คลาสเก่าที่อาจค้าง
+                eventCardContainer.className = ""; 
                 eventCardContainer.innerHTML = todayEvs.map(linkedEv => `
                     <div onclick="closeAnnouncement(); openEventView('${linkedEv.id}');" class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm cursor-pointer hover:border-indigo-300 transition-all mb-2 last:mb-0">
                         <div class="flex flex-col">
@@ -654,14 +705,11 @@
 
         function openAdminAnnouncement() {
             if (!isAdmin) return;
-            // ใส่ข้อมูลปัจจุบันลงใน Form แอดมิน
             document.getElementById('cfg-annc-active').value = popupConfig.is_active ? "true" : "false";
             document.getElementById('cfg-annc-title').value = popupConfig.title || '';
             document.getElementById('cfg-annc-msg').value = popupConfig.message || '';
             
-            // เติม List ลงใน Dropdown กิจกรรม
             const evSelect = document.getElementById('cfg-annc-event-id');
-            // เรียงกิจกรรมล่าสุดไปเก่า
             const sortedEvents = [...events].sort((a, b) => b.date.localeCompare(a.date));
             evSelect.innerHTML = `
                 <option value="">-- ไม่แนบกิจกรรม (แสดงแค่ข้อความ) --</option>
@@ -686,7 +734,6 @@
             updateScrollLock();
         }
 
-        // จัดการ Form ตั้งค่าประกาศ
         document.getElementById('admin-annc-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!isAdmin) return;
@@ -705,7 +752,6 @@
                 await setDoc(doc(db, 'settings', 'popup_config'), {
                     is_active, title, message, event_id
                 });
-                // ตั้งค่า hasShownPopup เป็น false เพื่อให้แอดมินทดสอบการแสดงผลได้ทันที
                 hasShownPopup = false; 
                 closeAdminAnnouncement();
                 showToast("อัปเดตตั้งค่าประกาศเรียบร้อยแล้ว");
@@ -717,16 +763,102 @@
             }
         });
 
-        // ฟังก์ชันเช็คสถานะว่าลิงก์ถูกล็อกหรือไม่
         const isLinkLocked = (link, eventDate) => {
             if (!link) return false;
-            if (link.status === 'always_open') return false; // แอดมินตั้งให้เปิดเสมอ
-            if (link.status === 'locked') return true;       // แอดมินตั้งให้ล็อกเสมอ
-            
-            // auto (เปิดตามวัน) หรือกรณีข้อมูลเก่าที่ไม่มี status
+            if (link.status === 'always_open') return false; 
+            if (link.status === 'locked') return true;       
             const todayStr = getTodayString();
-            return todayStr < eventDate; // ถ้าวันนี้ยังไม่ถึงวันนัดหมาย ให้ล็อกไว้
+            return todayStr < eventDate; 
         };
+
+        const eventToHtml = (e, showFullDate = false, showAdminOpts = false) => {
+            const hex = getHexColor(e.color);
+            const links = (e.links || []).sort((a,b) => (parseInt(a.order) || 0) - (parseInt(b.order) || 0));
+            const linksHtml = links.map(l => {
+                const locked = isLinkLocked(l, e.date);
+                if (locked) {
+                    return `
+                        <span onclick="event.stopPropagation()" class="px-2 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-bold rounded border border-slate-200 flex items-center gap-1 shadow-sm cursor-not-allowed" title="ลิงก์จะเปิดใช้งานในวันที่นัดหมาย">
+                            <i data-lucide="lock" class="w-2 h-2"></i> ${escapeHTML(l.label || 'ลิงก์')}
+                        </span>
+                    `;
+                } else {
+                    return `
+                        <a href="${escapeHTML(l.url)}" target="_blank" onclick="event.stopPropagation()" class="px-2 py-0.5 bg-white/80 hover:bg-white text-[9px] font-bold text-slate-700 rounded border border-slate-200 flex items-center gap-1 transition-all shadow-sm">
+                            <i data-lucide="external-link" class="w-2 h-2"></i> ${escapeHTML(l.label || 'เปิดลิงก์')}
+                        </a>
+                    `;
+                }
+            }).join('');
+            
+            const dateInfo = (e.endDate && e.endDate !== e.date) ? `${formatThaiDate(e.date)} ถึง ${formatThaiDate(e.endDate)}` : formatThaiDate(e.date);
+            const dateHtml = (showFullDate || (e.endDate && e.endDate !== e.date)) ? `<span class="text-[9px] font-bold text-slate-500 ml-2 border-l border-slate-300 pl-2">${dateInfo}</span>` : '';
+
+            const adminActions = (isAdmin && showAdminOpts) ? `
+                <div class="flex justify-end gap-2 mt-3 pt-2" style="border-top: 1px solid ${hex}30;">
+                    <button onclick="event.stopPropagation(); handleEditEvent('${e.id}')" class="px-2.5 py-1 bg-white text-indigo-600 rounded text-[9px] font-bold flex items-center gap-1 hover:bg-indigo-50 border border-indigo-100 transition-all shadow-sm"><i data-lucide="edit-3" class="w-3 h-3"></i> แก้ไข</button>
+                    <button onclick="event.stopPropagation(); handleDeleteEvent('${e.id}')" class="px-2.5 py-1 bg-white text-rose-600 rounded text-[9px] font-bold flex items-center gap-1 hover:bg-rose-50 border border-rose-100 transition-all shadow-sm"><i data-lucide="trash-2" class="w-3 h-3"></i> ลบ</button>
+                </div>
+            ` : '';
+
+            let descHtml = '';
+            if (e.description) {
+                let desc = e.description;
+                let isTruncated = false;
+                
+                const lines = desc.split('\n');
+                if (lines.length > 2) {
+                    desc = lines.slice(0, 2).join('\n');
+                    isTruncated = true;
+                }
+                if (desc.length > 120) {
+                    desc = desc.substring(0, 120);
+                    isTruncated = true;
+                }
+                
+                if (isTruncated) {
+                    descHtml = `<p class="text-[10px] mt-1.5 text-slate-600 whitespace-pre-wrap leading-relaxed">${escapeHTML(desc)}... <span style="color: ${hex};" class="font-bold">(แตะที่นี่เพื่ออ่านรายละเอียดเพิ่มเติม)</span></p>`;
+                } else {
+                    descHtml = `<p class="text-[10px] mt-1.5 text-slate-600 whitespace-pre-wrap leading-relaxed">${escapeHTML(desc)}</p>`;
+                }
+            }
+
+            return `
+                <div onclick="openEventView('${e.id}')" class="event-card-clickable p-3.5 rounded-xl border relative transition-all shadow-sm" style="background-color: ${hex}10; border-color: ${hex}30;">
+                    <div class="flex flex-col mb-1.5">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <div class="flex items-center">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap" style="background-color: ${hex}; color: #ffffff;">${e.time} น.</span>
+                                ${dateHtml}
+                            </div>
+                        </div>
+                        <h5 class="font-bold text-[12px] leading-tight mt-0.5 line-clamp-2 text-slate-800">${escapeHTML(e.title)}</h5>
+                    </div>
+                    ${descHtml}
+                    <div class="flex flex-wrap gap-1 mt-2.5">${linksHtml}</div>
+                    ${adminActions}
+                </div>
+            `;
+        };
+
+        function openUpcomingModal() {
+            const todayStr = getTodayString();
+            const upcomingEvents = events.filter(e => e.date > todayStr).sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+            
+            document.getElementById('upcoming-total').innerText = upcomingEvents.length;
+            const list = document.getElementById('upcoming-modal-list');
+            list.innerHTML = upcomingEvents.length ? upcomingEvents.map(e => eventToHtml(e, true, false)).join('') : `<div class="text-center py-10 text-slate-400 text-xs">ไม่มีกิจกรรมล่วงหน้า</div>`;
+            
+            document.getElementById('upcoming-modal').classList.remove('hidden');
+            document.getElementById('upcoming-modal').classList.add('flex');
+            updateScrollLock();
+        }
+
+        function closeUpcomingModal() {
+            document.getElementById('upcoming-modal').classList.add('hidden');
+            document.getElementById('upcoming-modal').classList.remove('flex');
+            updateScrollLock();
+        }
 
         function renderDashboard() {
             const todayStr = getTodayString();
@@ -736,45 +868,35 @@
             const containerToday = document.getElementById('today-events-container');
             const containerUpcoming = document.getElementById('upcoming-events-container');
 
-            const eventToHtml = (e, showFullDate = false) => {
-                const links = (e.links || []).sort((a,b) => (parseInt(a.order) || 0) - (parseInt(b.order) || 0));
-                const linksHtml = links.map(l => {
-                    const locked = isLinkLocked(l, e.date);
-                    if (locked) {
-                        return `
-                            <span onclick="event.stopPropagation()" class="px-2 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-bold rounded border border-slate-200 flex items-center gap-1 shadow-sm cursor-not-allowed" title="ลิงก์จะเปิดใช้งานในวันที่นัดหมาย">
-                                <i data-lucide="lock" class="w-2 h-2"></i> ${escapeHTML(l.label || 'ลิงก์')}
-                            </span>
-                        `;
-                    } else {
-                        return `
-                            <a href="${escapeHTML(l.url)}" target="_blank" onclick="event.stopPropagation()" class="px-2 py-0.5 bg-white/60 hover:bg-white text-[9px] font-bold rounded border border-white/40 flex items-center gap-1 transition-all shadow-sm">
-                                <i data-lucide="external-link" class="w-2 h-2"></i> ${escapeHTML(l.label || 'เปิดลิงก์')}
-                            </a>
-                        `;
-                    }
-                }).join('');
-                
-                const dateInfo = (e.endDate && e.endDate !== e.date) ? `${formatThaiDate(e.date)} ถึง ${formatThaiDate(e.endDate)}` : formatThaiDate(e.date);
-                const dateHtml = (showFullDate || (e.endDate && e.endDate !== e.date)) ? `<p class="text-[8px] font-semibold opacity-70">${dateInfo}</p>` : '';
+            if (containerToday) {
+                containerToday.innerHTML = todayEvents.length ? todayEvents.map(e => eventToHtml(e, false, false)).join('') : `<div class="text-center py-4 bg-slate-50/50 border border-dashed border-slate-200 rounded-xl text-slate-400 text-[10px]">ไม่มีกิจกรรมวันนี้</div>`;
+            }
 
-                return `
-                    <div onclick="openEventView('${e.id}')" class="event-card-clickable p-3 rounded-xl border relative transition-all bg-opacity-30 ${getColorClasses(e.color)}">
-                        <div class="flex flex-col mb-1.5">
-                            <div class="flex justify-between items-start mb-0.5">
-                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/60 border border-white/40 shadow-sm whitespace-nowrap">${e.time} น.</span>
-                                ${dateHtml}
+            if (containerUpcoming) {
+                const upcomingToShow = upcomingEvents.slice(0, 5);
+                if(upcomingToShow.length > 0) {
+                    containerUpcoming.innerHTML = upcomingToShow.map(e => {
+                        const hex = getHexColor(e.color);
+                        const dateInfo = (e.endDate && e.endDate !== e.date) ? `${e.date.split('-')[2]}/${e.date.split('-')[1]} - ${e.endDate.split('-')[2]}/${e.endDate.split('-')[1]}` : `${e.date.split('-')[2]}/${e.date.split('-')[1]}/${parseInt(e.date.split('-')[0])+543}`;
+                        
+                        return `
+                            <div class="py-2 flex items-start gap-2.5 border-b border-slate-50 last:border-0">
+                                <div class="w-2 h-2 rounded-full mt-1 shrink-0" style="background-color: ${hex}; box-shadow: 0 0 4px ${hex}80;"></div>
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] font-bold text-slate-400 leading-none mb-1">${e.time} น. • ${dateInfo}</span>
+                                    <span class="text-xs font-bold text-slate-700 leading-tight line-clamp-1">${escapeHTML(e.title)}</span>
+                                </div>
                             </div>
-                            <h5 class="font-bold text-[11px] leading-tight mt-1 line-clamp-2">${escapeHTML(e.title)}</h5>
-                        </div>
-                        ${e.description ? `<p class="text-[10px] mt-1 opacity-80 whitespace-pre-wrap line-clamp-1">${escapeHTML(e.description)}</p>` : ''}
-                        <div class="flex flex-wrap gap-1 mt-2">${linksHtml}</div>
-                    </div>
-                `;
-            };
-
-            if (containerToday) containerToday.innerHTML = todayEvents.length ? todayEvents.map(e => eventToHtml(e)).join('') : `<div class="text-center py-4 bg-slate-50/50 border border-dashed border-slate-200 rounded-xl text-slate-400 text-[10px]">ไม่มีกิจกรรมวันนี้</div>`;
-            if (containerUpcoming) containerUpcoming.innerHTML = upcomingEvents.length ? upcomingEvents.map(e => eventToHtml(e, true)).join('') : `<div class="text-center py-4 text-slate-400 text-[10px]">ไม่มีกิจกรรมล่วงหน้า</div>`;
+                        `;
+                    }).join('');
+                    containerUpcoming.style.maskImage = 'linear-gradient(to bottom, black 30%, transparent 100%)';
+                    containerUpcoming.style.webkitMaskImage = 'linear-gradient(to bottom, black 30%, transparent 100%)';
+                } else {
+                    containerUpcoming.innerHTML = `<div class="text-center py-4 text-slate-400 text-[10px]">ไม่มีกิจกรรมล่วงหน้า</div>`;
+                    containerUpcoming.style.maskImage = 'none';
+                    containerUpcoming.style.webkitMaskImage = 'none';
+                }
+            }
             if(window.lucide) window.lucide.createIcons();
         }
 
@@ -801,7 +923,7 @@
                 const dayEvs = events.filter(e => isDateInRange(dayStr, e.date, e.endDate));
                 let dots = '';
                 if(dayEvs.length) {
-                    dots = `<div class="absolute bottom-1.5 flex gap-0.5">${dayEvs.slice(0,3).map(e => `<span class="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${getDotColor(e.color)}"></span>`).join('')}</div>`;
+                    dots = `<div class="absolute bottom-1.5 flex gap-0.5">${dayEvs.slice(0,3).map(e => `<span class="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style="background-color: ${getHexColor(e.color)};"></span>`).join('')}</div>`;
                 }
                 
                 let borderClass = 'border-slate-50 text-slate-700 bg-white';
@@ -835,51 +957,7 @@
             if(!selEvs.length) {
                 container.innerHTML = `<div class="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200"><p class="text-slate-400 text-xs">ว่าง! ไม่มีนัดหมาย</p></div>`;
             } else {
-                container.innerHTML = selEvs.map(e => {
-                    const sortedLinks = (e.links || []).sort((a,b) => (parseInt(a.order) || 0) - (parseInt(b.order) || 0));
-                    const linksHtml = sortedLinks.map(l => {
-                        const locked = isLinkLocked(l, e.date);
-                        if (locked) {
-                            return `
-                                <span onclick="event.stopPropagation()" class="px-3 py-1.5 bg-slate-100 text-slate-400 text-[10px] font-bold rounded-lg border border-slate-200 flex items-center gap-1.5 shadow-sm cursor-not-allowed" title="ลิงก์จะเปิดใช้งานในวันที่นัดหมาย">
-                                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> ${escapeHTML(l.label || 'ลิงก์')} (ล็อก)
-                                </span>
-                            `;
-                        } else {
-                            return `
-                                <a href="${escapeHTML(l.url)}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white/70 text-[10px] font-bold rounded-lg border border-white/50 flex items-center gap-1.5 shadow-sm transition-all hover:bg-white">
-                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> ${escapeHTML(l.label || 'ลิงก์')}
-                                </a>
-                            `;
-                        }
-                    }).join('');
-                    
-                    const adminActions = isAdmin ? `
-                        <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-200/40">
-                            <button onclick="event.stopPropagation(); handleEditEvent('${e.id}')" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold flex items-center gap-1 hover:bg-indigo-100 transition-all"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i> แก้ไข</button>
-                            <button onclick="event.stopPropagation(); handleDeleteEvent('${e.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all hover:bg-red-100"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ลบ</button>
-                        </div>
-                    ` : '';
-
-                    const dateText = (e.endDate && e.endDate !== e.date) ? `<span class="text-[9px] font-bold text-slate-500 ml-2">ถึง ${formatThaiDate(e.endDate)}</span>` : '';
-
-                    return `
-                        <div onclick="openEventView('${e.id}')" class="event-card-clickable p-4 rounded-2xl border relative bg-opacity-30 ${getColorClasses(e.color)}">
-                            <div class="flex flex-col mb-3">
-                                <div class="flex justify-between items-start mb-1">
-                                    <div class="flex items-center">
-                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-white/60 border border-white/40 shadow-sm whitespace-nowrap">${e.time} น.</span>
-                                        ${dateText}
-                                    </div>
-                                </div>
-                                <h5 class="font-bold text-sm leading-tight mt-1 line-clamp-3">${escapeHTML(e.title)}</h5>
-                            </div>
-                            ${e.description ? `<p class="text-[11px] opacity-80 whitespace-pre-wrap mb-4 line-clamp-3">${escapeHTML(e.description)}</p>` : ''}
-                            <div class="flex flex-wrap gap-2">${linksHtml}</div>
-                            ${adminActions}
-                        </div>
-                    `;
-                }).join('');
+                container.innerHTML = selEvs.map(e => eventToHtml(e, false, true)).join('');
             }
             if(window.lucide) window.lucide.createIcons();
         }
@@ -912,7 +990,7 @@
         }
 
         function updateScrollLock() {
-            const modals = ['details-modal', 'event-view-modal', 'auth-modal', 'preview-modal', 'announcement-modal', 'admin-announcement-modal'];
+            const modals = ['details-modal', 'event-view-modal', 'auth-modal', 'preview-modal', 'announcement-modal', 'admin-announcement-modal', 'upcoming-modal'];
             const isAnyOpen = modals.some(id => {
                 const el = document.getElementById(id);
                 return el && !el.classList.contains('hidden');
@@ -988,7 +1066,10 @@
             }
 
             const colorDot = document.getElementById('view-ev-color-dot');
-            if(colorDot) colorDot.className = `w-3 h-3 rounded-full ${getDotColor(e.color)}`;
+            if(colorDot) {
+                colorDot.className = `w-3 h-3 rounded-full`;
+                colorDot.style.backgroundColor = getHexColor(e.color);
+            }
 
             const linksContainer = document.getElementById('view-ev-links-container');
             const linksSection = document.getElementById('view-ev-links-section');
@@ -1037,7 +1118,6 @@
             if(!container) return;
             const row = document.createElement('div');
             
-            // เพิ่ม class 'draggable="true"' และจัดช่องว่างสำหรับการลาก
             row.className = "link-form-row grid grid-cols-12 gap-2 bg-white p-2 rounded-lg border border-slate-100 shadow-sm mb-2 fade-in items-center";
             row.draggable = true;
             row.innerHTML = `
@@ -1056,7 +1136,6 @@
                 <div class="col-span-1 flex items-center justify-center"><button type="button" onclick="this.parentElement.parentElement.remove(); updateScrollLock();" class="text-red-400 hover:text-red-600 transition-colors"><i data-lucide="minus-circle" class="w-4 h-4"></i></button></div>
             `;
             
-            // Drag and Drop Event Listeners
             row.addEventListener('dragstart', () => {
                 row.classList.add('dragging');
             });
@@ -1068,7 +1147,6 @@
             if(window.lucide) window.lucide.createIcons();
         }
 
-        // ฟังค์ชันสำหรับหาตำแหน่งใน Drag & Drop
         function getDragAfterElement(container, y) {
             const draggableElements = [...container.querySelectorAll('.link-form-row:not(.dragging)')];
             return draggableElements.reduce((closest, child) => {
@@ -1082,7 +1160,6 @@
             }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
 
-        // เพิ่ม Listener ของ Drag & Drop ให้ Container 
         document.addEventListener('DOMContentLoaded', () => {
             const linksContainer = document.getElementById('links-form-container');
             if(linksContainer) {
@@ -1106,7 +1183,7 @@
             const ed = document.getElementById('ev-enddate');
             if(ed) ed.min = ds;
             const evDate = document.getElementById('ev-date');
-            if(evDate) evDate.value = ds; // Set default start date to selected day
+            if(evDate) evDate.value = ds; 
             renderModalDetails(); 
             renderCalendar();
             document.getElementById('details-modal').classList.remove('hidden'); 
@@ -1129,7 +1206,8 @@
             document.getElementById('ev-date').value = e.date;
             document.getElementById('ev-time').value = e.time;
             document.getElementById('ev-enddate').value = e.endDate || '';
-            document.getElementById('ev-color').value = e.color || 'blue';
+            
+            selectColor(getHexColor(e.color), false);
             
             document.getElementById('ev-desc').value = e.description || '';
             setTimeout(() => {
@@ -1143,13 +1221,22 @@
             const container = document.getElementById('links-form-container');
             if(container) {
                 container.innerHTML = '';
-                // เรียงลำดับตามข้อมูล order ในฐานข้อมูลก่อนแสดงผล
                 (e.links || []).sort((a,b) => (parseInt(a.order)||0) - (parseInt(b.order)||0)).forEach(l => addLinkFormRow(l));
             }
 
+            const formContainer = document.getElementById('admin-form-container');
+            formContainer.classList.remove('border-slate-100', 'bg-slate-50/50');
+            formContainer.classList.add('border-amber-400', 'bg-amber-50/30', 'ring-4', 'ring-amber-50');
+
             const formTitle = document.getElementById('admin-form-title');
-            if(formTitle) formTitle.innerHTML = '<i data-lucide="edit-3" class="w-4 h-4 text-indigo-500"></i> แก้ไขข้อมูลนัดหมาย';
+            if(formTitle) formTitle.innerHTML = '<i data-lucide="edit-3" class="w-4 h-4 text-amber-500"></i> <span class="text-amber-700">แก้ไขข้อมูลนัดหมาย</span>';
             
+            const subBtn = document.getElementById('submit-btn');
+            if (subBtn) {
+                subBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                subBtn.classList.add('bg-amber-500', 'hover:bg-amber-600');
+            }
+
             const subTxt = document.getElementById('submit-text'), subIc = document.getElementById('submit-icon');
             if(subTxt) subTxt.innerText = 'อัปเดตข้อมูล';
             if(subIc) subIc.setAttribute('data-lucide', 'save');
@@ -1169,15 +1256,29 @@
             const evDate = document.getElementById('ev-date');
             if (evDate && selectedDate) evDate.value = selectedDate;
 
+            selectColor('#818cf8', false);
+
             const linksContainer = document.getElementById('links-form-container');
             if(linksContainer) linksContainer.innerHTML = '';
             
             const descEl = document.getElementById('ev-desc');
             if(descEl) descEl.style.height = 'auto';
             
+            const formContainer = document.getElementById('admin-form-container');
+            if(formContainer) {
+                formContainer.classList.add('border-slate-100', 'bg-slate-50/50');
+                formContainer.classList.remove('border-amber-400', 'bg-amber-50/30', 'ring-4', 'ring-amber-50');
+            }
+
             const formTitle = document.getElementById('admin-form-title');
             if(formTitle) formTitle.innerHTML = '<i data-lucide="plus" class="w-4 h-4 text-indigo-500"></i> เพิ่มนัดหมายใหม่';
             
+            const subBtn = document.getElementById('submit-btn');
+            if (subBtn) {
+                subBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                subBtn.classList.remove('bg-amber-500', 'hover:bg-amber-600');
+            }
+
             const subTxt = document.getElementById('submit-text'), subIc = document.getElementById('submit-icon');
             if(subTxt) subTxt.innerText = 'บันทึกกิจกรรม';
             if(subIc) subIc.setAttribute('data-lucide', 'plus');
@@ -1200,7 +1301,7 @@
                 if(exp) exp.classList.remove('hidden'); 
                 if(hist) hist.classList.remove('hidden'); 
                 if(ctrl) ctrl.classList.remove('hidden');
-                if(anncToggle) anncToggle.classList.remove('hidden'); // แสดงปุ่มตั้งค่าประกาศ
+                if(anncToggle) anncToggle.classList.remove('hidden'); 
                 if(!siteActive && warn) warn.classList.remove('hidden');
                 renderAdminHistory();
             } else {
@@ -1210,7 +1311,7 @@
                 if(exp) exp.classList.add('hidden'); 
                 if(hist) hist.classList.add('hidden'); 
                 if(ctrl) ctrl.classList.add('hidden'); 
-                if(anncToggle) anncToggle.classList.add('hidden'); // ซ่อนปุ่มตั้งค่าประกาศ
+                if(anncToggle) anncToggle.classList.add('hidden'); 
                 if(warn) warn.classList.add('hidden');
                 resetForm();
             }
@@ -1230,44 +1331,14 @@
             } catch (e) { showToast("เกิดข้อผิดพลาด", true); }
         }
 
-        // ตัวช่วยสำหรับดึงสี กรณีที่ข้อมูลเก่าไม่มีค่าสี เพื่อไม่ให้ระบบพังตอนพรีวิว
-        const safeColor = (c) => (c && exportColors[c]) ? c : 'blue';
-
         const generateExportPagesHTML = () => {
             const y = currentDate.getFullYear(), m = currentDate.getMonth();
-            const dim = new Date(y, m+1, 0).getDate(), start = new Date(y, m, 1).getDay();
             const allActiveEvs = events.filter(e => e.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).sort((a,b) => a.date.localeCompare(b.date));
             
-            // เพิ่มชุดเวลาการทำข้อมูลปัจจุบัน
             const now = new Date();
             const tsStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
-            const todayStr = getTodayString(); 
             
-            let gridHtml = '';
-            for (let i = 0; i < start; i++) gridHtml += `<div></div>`;
-            for (let d = 1; d <= dim; d++) {
-                const dayStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const dayEvs = events.filter(e => isDateInRange(dayStr, e.date, e.endDate));
-                
-                let innerStyle = 'width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; margin: 0 auto; border-radius: 50%;';
-                let textStyle = 'color: #64748b; font-weight: 600; font-size: 16px;';
-
-                if (dayEvs.length > 0) {
-                    const c = safeColor(dayEvs[0].color);
-                    innerStyle += ` background-color: ${exportColors[c].bg}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`;
-                    textStyle = 'color: white; font-weight: 800; font-size: 16px;';
-                }
-
-                gridHtml += `
-                    <div style="display: flex; justify-content: center; align-items: center; height: 44px;">
-                        <div style="${innerStyle}">
-                            <span style="${textStyle}">${d}</span>
-                        </div>
-                    </div>
-                `;
-            }
-
-            const renderBasePage = (eventsHtml, pageNum, totalPages, gridH) => {
+            const renderBasePage = (eventsHtml, pageNum, totalPages) => {
                 return `
                 <div id="capture-layout-wrapper-${pageNum}" style="width: 1123px; height: 794px; background-color: #f8fafc; padding: 40px; font-family: 'Kanit', sans-serif; display: flex; flex-direction: column; box-sizing: border-box;">
                     <style>
@@ -1280,26 +1351,11 @@
                         </div>
                         <span style="font-size: 22px; font-weight: 600; color: #4b5563;">เดือน${thaiMonths[m]} ${y + 543} ${totalPages > 1 ? '(หน้า ' + pageNum + '/' + totalPages + ')' : ''}</span>
                     </div>
-                    <div style="display: flex; gap: 40px; flex: 1; overflow: hidden;">
-                        <!-- ปฏิทินฝั่งซ้าย (Inline Styles) -->
-                        <div style="width: 440px; flex-shrink: 0; background: white; padding: 25px; border-radius: 30px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #94a3b8; padding: 16px 25px; border-radius: 16px; color: white; font-weight: 900; font-size: 22px; letter-spacing: 1px;">
-                                <span style="text-transform: uppercase;">${engMonths[m]}</span>
-                                <span>${y}</span>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 16px; font-weight: 800; color: #cbd5e1; margin-bottom: 10px;">
-                                <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 8px; flex: 1; align-content: start;">
-                                ${gridH}
-                            </div>
-                        </div>
-                        
-                        <!-- ช่องแสดงรายการฝั่งขวา -->
-                        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                            <h3 style="font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">รายการกิจกรรม</h3>
+                    <div style="display: flex; gap: 40px; flex: 1; overflow: hidden; width: 100%; justify-content: center;">
+                        <!-- ช่องแสดงรายการฝั่งขวา (ขยายเต็มไม่มีปฏิทิน) -->
+                        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; max-width: 900px;">
                             <div style="flex: 1; overflow: visible;">
-                                ${eventsHtml || '<div style="color: #94a3b8; font-weight: 500; font-size: 16px;">ไม่มีรายการกิจกรรมในเดือนนี้</div>'}
+                                ${eventsHtml || '<div style="color: #94a3b8; font-weight: 500; font-size: 16px; text-align: center; margin-top: 40px;">ไม่มีรายการกิจกรรมในเดือนนี้</div>'}
                             </div>
                         </div>
                     </div>
@@ -1315,9 +1371,8 @@
             const renderEventHtml = (e) => {
                 let desc = e.description || '';
                 let isTruncated = false;
-                const c = safeColor(e.color);
+                const c = getHexColor(e.color);
                 
-                // ตัดคำให้อยู่ใน 2 บรรทัด หรือความยาวไม่เกิน 150 ตัวอักษร
                 const lines = desc.split('\n');
                 if (lines.length > 2) {
                     desc = lines.slice(0, 2).join('\n');
@@ -1332,18 +1387,17 @@
                 if (e.description) {
                     let moreText = '';
                     if (isTruncated) {
-                        moreText = '... <span style="color: ' + exportColors[c].bg + '; font-weight: bold;">(ดูข้อมูลเพิ่มเติมผ่านลิ้งก์เว็บไซต์)</span>';
+                        moreText = '... <span style="color: ' + c + '; font-weight: bold;">(ดูข้อมูลเพิ่มเติมผ่านลิ้งก์เว็บไซต์)</span>';
                     }
                     descHtml = '<div style="font-size: 14px; color: #475569; line-height: 1.6; white-space: pre-wrap; margin-top: 6px; word-break: break-word;">' + escapeHTML(desc) + moreText + '</div>';
                 }
 
-                // จัดรูปแบบวันที่ หากมีหลายวันให้แสดง "ถึงวันที่"
                 const dateStrDisplay = (e.endDate && e.endDate !== e.date) 
                     ? `${e.date.split('-').reverse().join('/')} ถึง ${e.endDate.split('-').reverse().join('/')}` 
                     : e.date.split('-').reverse().join('/');
 
                 return `
-                <div style="margin-bottom: 24px; border-left: 4px solid ${exportColors[c].bg}; padding-left: 16px; page-break-inside: avoid; width: 100%; box-sizing: border-box;">
+                <div style="margin-bottom: 24px; border-left: 4px solid ${c}; padding-left: 16px; page-break-inside: avoid; width: 100%; box-sizing: border-box;">
                     <div style="font-size: 14px; color: #64748b; font-weight: 800; margin-bottom: 4px;">${e.time} น. (${dateStrDisplay})</div>
                     <div style="font-weight: 800; font-size: 18px; color: #1e293b; line-height: 1.3; word-break: break-word;">${escapeHTML(e.title)}</div>
                     ${descHtml}
@@ -1351,15 +1405,14 @@
                 `;
             };
 
-            // --- ระบบคำนวณแบ่งหน้าอัตโนมัติ ตามความสูงของตัวอักษรจริงเพื่อป้องกันการตัดตก ---
             const measureDiv = document.createElement('div');
-            measureDiv.style.width = '560px'; // ขนาดความกว้างของฝั่งขวา (ประมาณการ)
+            measureDiv.style.width = '900px'; 
             measureDiv.style.position = 'absolute';
             measureDiv.style.visibility = 'hidden';
             measureDiv.style.fontFamily = "'Kanit', sans-serif";
             document.body.appendChild(measureDiv);
 
-            const MAX_HEIGHT = 450; // ความสูงปลอดภัยสูงสุดต่อ 1 หน้า (เหลือเผื่อหัว/ท้ายกระดาษ)
+            const MAX_HEIGHT = 500; 
             const pagesData = [];
             let currentPageEventsHtml = '';
             let currentHeight = 0;
@@ -1367,9 +1420,8 @@
             for (const e of allActiveEvs) {
                 const evHtml = renderEventHtml(e);
                 measureDiv.innerHTML = evHtml;
-                const evHeight = measureDiv.offsetHeight + 15; // เผื่อขอบ margin-bottom ด้านล่าง
+                const evHeight = measureDiv.offsetHeight + 15; 
 
-                // ถ้านำบล็อกใหม่มาใส่แล้วความสูงเกินหน้ากระดาษ ให้ตัดแบ่งขึ้นหน้าใหม่
                 if (currentHeight + evHeight > MAX_HEIGHT && currentPageEventsHtml !== '') {
                     pagesData.push(currentPageEventsHtml);
                     currentPageEventsHtml = evHtml;
@@ -1380,7 +1432,6 @@
                 }
             }
             
-            // เก็บหน้าสุดท้ายเข้าอาร์เรย์
             if (currentPageEventsHtml !== '') {
                 pagesData.push(currentPageEventsHtml);
             }
@@ -1391,7 +1442,7 @@
             document.body.removeChild(measureDiv);
 
             const totalPages = pagesData.length;
-            return pagesData.map((eventsHtml, idx) => renderBasePage(eventsHtml, idx + 1, totalPages, gridHtml));
+            return pagesData.map((eventsHtml, idx) => renderBasePage(eventsHtml, idx + 1, totalPages));
         };
 
         window.cachedExportDataURLs = []; 
@@ -1603,6 +1654,11 @@
                         document.getElementById('loading').classList.add('hidden');
                         checkSiteVisibility();
                         checkAndShowAnnouncement(); // เช็คว่าพร้อมแสดงป๊อปอัปประกาศหรือยัง
+                        
+                        // สร้างประวัติสีตั้งต้นสำหรับหน้า Admin จากกิจกรรมเก่า
+                        const evColors = [...new Set(events.map(e => getHexColor(e.color)))].filter(Boolean);
+                        evColors.forEach(c => { if(!recentColors.includes(c)) recentColors.unshift(c); });
+                        recentColors = recentColors.slice(0, 10);
                     });
                     
                     // โหลดการตั้งค่าเว็บ และ การตั้งค่าประกาศควบคู่กัน
