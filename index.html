@@ -2,7 +2,8 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ปรับปรุง viewport เพื่อล็อกการซูมและป้องกัน auto-zoom บนมือถือ -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ระบบตารางนัดหมาย</title>
     
     <!-- Favicon (Calendar) -->
@@ -34,7 +35,12 @@
     </script>
 
     <style>
-        body { font-family: 'Kanit', sans-serif; }
+        /* ล็อกการซูมจากการกดซ้ำ (Double tap zoom) */
+        html, body { 
+            font-family: 'Kanit', sans-serif; 
+            touch-action: manipulation;
+        }
+        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -60,6 +66,13 @@
             border: 2px solid transparent;
             background-origin: border-box;
             background-clip: padding-box, border-box;
+        }
+
+        /* ป้องกัน iOS ซูมเมื่อ Focus input (ต้องมีขนาด 16px ขึ้นไป) */
+        @media screen and (max-width: 768px) {
+            input, select, textarea, button {
+                font-size: 16px !important;
+            }
         }
     </style>
 </head>
@@ -175,13 +188,11 @@
         <!-- Admin Toggle Button & Status Panel -->
         <div class="absolute top-2 right-4 sm:top-6 sm:right-6 flex items-center gap-2 z-10">
             <div id="site-control-panel" class="hidden fade-in bg-white/80 backdrop-blur border border-slate-200 rounded-xl p-1.5 shadow-sm flex items-center">
-                <!-- แก้ไขปุ่มประกาศให้เป็นสัญลักษณ์ในมือถือ -->
                 <button id="admin-annc-toggle" onclick="openAdminAnnouncement()" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-bold transition-all shadow-sm flex items-center gap-1 mr-1 sm:mr-2 ml-0.5">
                     <i data-lucide="megaphone" class="w-3.5 h-3.5 sm:w-3 sm:h-3"></i> 
                     <span class="hidden sm:inline">ประกาศ</span>
                 </button>
                 <div class="h-4 w-px bg-slate-200 mx-1"></div>
-                <!-- ซ่อนข้อความ สถานะเว็บ ในมือถือ -->
                 <span class="hidden sm:inline-block text-[10px] font-bold px-2 text-slate-500 uppercase tracking-wider">สถานะเว็บ:</span>
                 <button id="site-status-toggle" onclick="handleToggleSiteStatus()" class="px-2 sm:px-3 py-1 rounded-lg text-[10px] font-bold transition-all shadow-sm">
                     กำลังโหลด...
@@ -451,21 +462,59 @@
     </div>
 
     <!-- PREVIEW MODAL -->
-    <div id="preview-modal" class="fixed inset-0 z-[120] items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden fade-in">
+    <div id="preview-modal" class="fixed inset-0 z-[120] flex-col items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden fade-in relative">
+            
+            <!-- Modal Header -->
             <div class="flex justify-between items-center p-4 sm:px-6 border-b border-slate-100 shrink-0">
                 <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="eye" class="text-indigo-500"></i> พรีวิวข้อมูลก่อนส่งออก
+                    <i data-lucide="eye" class="text-indigo-500 w-5 h-5"></i> พรีวิวข้อมูลก่อนส่งออก
                 </h3>
-                <button onclick="closePreviewModal()" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><i data-lucide="x"></i></button>
+                <button onclick="closePreviewModal()" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div id="preview-images-container" class="flex-1 overflow-auto bg-[#e2e8f0] p-4 sm:p-8 flex flex-col items-center gap-6">
+
+            <!-- Preview Toolbar -->
+            <div id="preview-toolbar" class="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-x-4 gap-y-2 items-center text-sm shrink-0">
+                <!-- Orientation -->
+                <div class="flex items-center gap-1.5">
+                    <label class="font-bold text-slate-600 text-xs">แนวกระดาษ:</label>
+                    <select id="prev-orient" class="px-2 py-1.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        <option value="l">แนวนอน (Landscape)</option>
+                        <option value="p">แนวตั้ง (Portrait)</option>
+                    </select>
+                </div>
+                <!-- Mode -->
+                <div class="flex items-center gap-1.5">
+                    <label class="font-bold text-slate-600 text-xs">รูปแบบ:</label>
+                    <select id="prev-mode" class="px-2 py-1.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        <option value="full">แบบเต็ม (มีรายละเอียดทั้งหมด)</option>
+                        <option value="compact" selected>แบบย่อ (รายละเอียด 2 บรรทัด)</option>
+                        <option value="title">แบบหัวข้อ (ไม่มีรายละเอียด)</option>
+                    </select>
+                </div>
+                <!-- Month Range -->
+                <div class="flex items-center gap-1.5">
+                    <label class="font-bold text-slate-600 text-xs">ช่วงเดือน:</label>
+                    <input type="month" id="prev-start-month" class="px-2 py-1 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                    <span class="text-slate-400 text-xs font-semibold">ถึง</span>
+                    <input type="month" id="prev-end-month" class="px-2 py-1 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                </div>
+                <!-- Apply Button -->
+                <button onclick="refreshPreview()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg shadow-sm font-bold text-xs hover:bg-indigo-700 ml-auto flex items-center gap-1 transition-colors">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> สร้างพรีวิวใหม่
+                </button>
+            </div>
+
+            <!-- Preview Images Container -->
+            <div id="preview-images-container" class="flex-1 overflow-auto bg-[#cbd5e1] p-4 sm:p-8 flex flex-col items-center gap-6">
                 <!-- รูปภาพจะถูกเพิ่มเข้ามาที่นี่โดย JS -->
             </div>
-            <div class="p-4 sm:px-6 border-t border-slate-100 bg-slate-50 flex flex-wrap justify-end gap-3 shrink-0">
-                <button onclick="closePreviewModal()" class="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold shadow-sm transition-colors">กลับไปแก้ไข</button>
-                <button onclick="downloadFromPreview('image')" class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all"><i data-lucide="download" class="w-4 h-4"></i> ดาวน์โหลดรูปทั้งหมด</button>
-                <button onclick="downloadFromPreview('pdf')" class="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all"><i data-lucide="file-down" class="w-4 h-4"></i> ดาวน์โหลด PDF</button>
+
+            <!-- Modal Footer Actions -->
+            <div class="p-4 sm:px-6 border-t border-slate-100 bg-white flex flex-wrap justify-end gap-3 shrink-0">
+                <button onclick="closePreviewModal()" class="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-bold shadow-sm transition-colors">กลับไปแก้ไข</button>
+                <button onclick="downloadFromPreview('image')" class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all"><i data-lucide="download" class="w-4 h-4"></i> ดาวน์โหลดรูปทั้งหมด</button>
+                <button onclick="downloadFromPreview('pdf')" class="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all"><i data-lucide="file-down" class="w-4 h-4"></i> ดาวน์โหลด PDF</button>
             </div>
         </div>
     </div>
@@ -571,6 +620,7 @@
         window.handleNextMonth = handleNextMonth;
         window.handleGoToday = handleGoToday;
         window.openPreviewModal = openPreviewModal;
+        window.refreshPreview = refreshPreview; // Exported new function
         window.openDayDetails = openDayDetails;
         window.closeDetailsModal = closeDetailsModal;
         window.handleToggleSiteStatus = handleToggleSiteStatus;
@@ -973,11 +1023,14 @@
                     dots = `<div class="absolute bottom-1.5 flex gap-0.5">${dayEvs.slice(0,3).map(e => `<span class="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full" style="background-color: ${getHexColor(e.color)};"></span>`).join('')}</div>`;
                 }
                 
-                // คำนวณสไตล์ของขอบ (Border)
+                // คำนวณสไตล์ของขอบ (Border) และพื้นหลัง
                 let borderInlineStyle = '';
-                let bgContent = 'white'; // พื้นหลังด้านใน (padding-box)
+                let bgContent = 'white'; 
                 
-                if (isToday) bgContent = '#f0f4ff'; // พื้นหลังสีครามอ่อนสำหรับวันนี้
+                // ปรับแต่ง "วันนี้": ถมพื้นหลังสีดำโปร่งใส 10%
+                if (isToday) {
+                    bgContent = 'rgba(0, 0, 0, 0.1)'; 
+                }
 
                 if (dayColors.length === 1) {
                     // กรณีมีสีเดียว ให้ใช้สีนั้นเป็นสีขอบ
@@ -989,13 +1042,15 @@
                         background-image: linear-gradient(${bgContent}, ${bgContent}), linear-gradient(135deg, ${gradientColors});
                     `;
                 } else {
-                    // กรณีไม่มีกิจกรรม
-                    borderInlineStyle = `border-color: ${isToday ? '#6366f1' : '#f1f5f9'}; background-color: ${bgContent};`;
+                    // กรณีไม่มีกิจกรรม: ปรับสีขอบวันนี้ให้ซอฟต์เข้ากับพื้นหลัง
+                    borderInlineStyle = `border-color: ${isToday ? 'rgba(0, 0, 0, 0.05)' : '#f1f5f9'}; background-color: ${bgContent};`;
                 }
 
                 const ringClass = isSelected ? 'ring-4 ring-indigo-200 z-10' : '';
                 const opacityClass = isPast && !isToday ? 'opacity-50 grayscale-[0.5]' : '';
-                const textColor = isToday ? 'text-indigo-700' : 'text-slate-700';
+                
+                // สีข้อความ: วันนี้เป็นสีดำเข้ม (เนื่องจากพื้นหลังจาง)
+                const textColor = isToday ? 'text-black font-black' : 'text-slate-700';
 
                 grid += `
                     <button onclick="openDayDetails('${dayStr}')" 
@@ -1405,172 +1460,270 @@
             } catch (e) { showToast("เกิดข้อผิดพลาด", true); }
         }
 
-        // ตัวช่วยสำหรับดึงสี กรณีที่ข้อมูลเก่าไม่มีค่าสี เพื่อไม่ให้ระบบพังตอนพรีวิว
         const safeColor = (c) => (c && exportColors[c]) ? c : 'blue';
 
+        // --- NEW PREVIEW GENERATOR (Multi-Month, Smart Highlight, Orientation, Compact Grid) ---
         const generateExportPagesHTML = () => {
-            const y = currentDate.getFullYear(), m = currentDate.getMonth();
-            const dim = new Date(y, m + 1, 0).getDate(), start = new Date(y, m, 1).getDay();
-            const allActiveEvs = events.filter(e => e.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).sort((a,b) => a.date.localeCompare(b.date));
-            
-            // เพิ่มชุดเวลาการทำข้อมูลปัจจุบัน
+            const orient = document.getElementById('prev-orient').value;
+            const mode = document.getElementById('prev-mode').value;
+            const startMonthVal = document.getElementById('prev-start-month').value;
+            const endMonthVal = document.getElementById('prev-end-month').value;
+
+            const startY = parseInt(startMonthVal.split('-')[0]);
+            const startM = parseInt(startMonthVal.split('-')[1]) - 1;
+            const endY = parseInt(endMonthVal.split('-')[0]);
+            const endM = parseInt(endMonthVal.split('-')[1]) - 1;
+
+            const allPagesHtml = [];
+            let globalPageNum = 1;
+
+            // Generate list of months to render
+            const monthsToRender = [];
+            let currY = startY;
+            let currM = startM;
+            while (currY < endY || (currY === endY && currM <= endM)) {
+                monthsToRender.push({ year: currY, month: currM });
+                currM++;
+                if (currM > 11) { currM = 0; currY++; }
+            }
+
             const now = new Date();
             const tsStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
-            
-            let gridHtml = '';
-            for (let i = 0; i < start; i++) gridHtml += `<div></div>`;
-            for (let d = 1; d <= dim; d++) {
-                const dayStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const dayEvs = events.filter(e => isDateInRange(dayStr, e.date, e.endDate));
-                
-                let innerStyle = 'width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; margin: 0 auto; border-radius: 50%;';
-                let textStyle = 'color: #64748b; font-weight: 600; font-size: 16px;';
 
-                if (dayEvs.length > 0) {
-                    const c = safeColor(dayEvs[0].color);
-                    innerStyle += ` background-color: ${exportColors[c].bg}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`;
-                    textStyle = 'color: white; font-weight: 800; font-size: 16px;';
-                }
+            // Setup dimensions based on orientation
+            const canvasW = orient === 'l' ? 1123 : 794;
+            const canvasH = orient === 'l' ? 794 : 1123;
+            // Adjust max height for pagination: Portrait is taller, so we have more vertical space
+            const contentMaxH = orient === 'l' ? 450 : 800; 
 
-                gridHtml += `
-                    <div style="display: flex; justify-content: center; align-items: center; height: 44px;">
-                        <div style="${innerStyle}">
-                            <span style="${textStyle}">${d}</span>
-                        </div>
-                    </div>
-                `;
-            }
+            for (const { year: y, month: m } of monthsToRender) {
+                const dim = new Date(y, m + 1, 0).getDate();
+                const start = new Date(y, m, 1).getDay();
+                const monthStartStr = `${y}-${String(m+1).padStart(2,'0')}-01`;
+                const monthEndStr = `${y}-${String(m+1).padStart(2,'0')}-${String(dim).padStart(2,'0')}`;
 
-            const renderBasePage = (eventsHtml, pageNum, totalPages, gridH) => {
-                return `
-                <div id="capture-layout-wrapper-${pageNum}" style="width: 1123px; height: 794px; background-color: #f8fafc; padding: 40px; font-family: 'Kanit', sans-serif; display: flex; flex-direction: column; box-sizing: border-box;">
-                    <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap'); 
-                        * { font-family: 'Kanit', sans-serif !important; }
-                    </style>
-                <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 25px;">
-                    <div class="preview-title-capsule" style="background-color: #4b5563; color: white; border-radius: 999px; padding: 12px 70px; margin-bottom: 10px;">
-                        <span style="font-size: 40px; font-weight: 800; line-height: 1;">ตารางนัดหมาย</span>
-                    </div>
-                    <span style="font-size: 22px; font-weight: 600; color: #4b5563;">เดือน${thaiMonths[m]} ${y + 543} ${totalPages > 1 ? '(หน้า ' + pageNum + '/' + totalPages + ')' : ''}</span>
-                </div>
-                <div style="display: flex; gap: 40px; flex: 1; overflow: hidden;">
-                    <!-- ปฏิทินฝั่งซ้าย (Inline Styles) -->
-                    <div style="width: 440px; flex-shrink: 0; background: white; padding: 25px; border-radius: 30px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #94a3b8; padding: 16px 25px; border-radius: 16px; color: white; font-weight: 900; font-size: 22px; letter-spacing: 1px;">
-                            <span style="text-transform: uppercase;">${engMonths[m]}</span>
-                            <span>${y}</span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 16px; font-weight: 800; color: #cbd5e1; margin-bottom: 10px;">
-                            <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 8px; flex: 1; align-content: start;">
-                            ${gridH}
-                        </div>
-                    </div>
-                    
-                    <!-- ช่องแสดงรายการฝั่งขวา -->
-                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                        <h3 style="font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">รายการกิจกรรม</h3>
-                        <div style="flex: 1; overflow: visible;">
-                            ${eventsHtml || '<div style="color: #94a3b8; font-weight: 500; font-size: 16px;">ไม่มีรายการกิจกรรมในเดือนนี้</div>'}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- ส่วน Footer -->
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; margin-top: 10px;">
-                    <div style="color: #cbd5e1; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Verified Appointment System • MORANASATECT</div>
-                    <div style="color: #94a3b8; font-size: 12px; font-weight: bold;">ข้อมูลเมื่อ: ${tsStr}</div>
-                </div>
-            </div>`;
-            };
+                // Filter events that OVERLAP with this month
+                const monthEvents = events.filter(e => {
+                    const eStart = e.date;
+                    const eEnd = e.endDate || e.date;
+                    return (eStart <= monthEndStr && eEnd >= monthStartStr);
+                }).sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 
-            const renderEventHtmlEx = (e) => {
-                let desc = e.description || '';
-                let isTruncated = false;
-                const c = safeColor(e.color);
-                
-                // ตัดคำให้อยู่ใน 2 บรรทัด หรือความยาวไม่เกิน 150 ตัวอักษร
-                const lines = desc.split('\n');
-                if (lines.length > 2) {
-                    desc = lines.slice(0, 2).join('\n');
-                    isTruncated = true;
-                }
-                if (desc.length > 150) {
-                    desc = desc.substring(0, 150);
-                    isTruncated = true;
-                }
-
-                let descHtml = '';
-                if (e.description) {
-                    let moreText = '';
-                    if (isTruncated) {
-                        moreText = '... <span style="color: ' + exportColors[c].bg + '; font-weight: bold;">(ดูข้อมูลเพิ่มเติมผ่านลิ้งก์เว็บไซต์)</span>';
+                // Helper to get all dates of an event within THIS month
+                const getEventDatesInMonth = (e) => {
+                    const dStart = new Date(e.date);
+                    const dEnd = new Date(e.endDate || e.date);
+                    const dates = [];
+                    for(let d = new Date(dStart); d <= dEnd; d.setDate(d.getDate() + 1)) {
+                        if(d.getFullYear() === y && d.getMonth() === m) {
+                            dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+                        }
                     }
-                    descHtml = '<div style="font-size: 14px; color: #475569; line-height: 1.6; white-space: pre-wrap; margin-top: 6px; word-break: break-word;">' + escapeHTML(desc) + moreText + '</div>';
-                }
+                    return dates;
+                };
 
-                // จัดรูปแบบวันที่ หากมีหลายวันให้แสดง "ถึงวันที่"
-                const dateStrDisplay = (e.endDate && e.endDate !== e.date) 
-                    ? `${e.date.split('-').reverse().join('/')} ถึง ${e.endDate.split('-').reverse().join('/')}` 
-                    : e.date.split('-').reverse().join('/');
+                // Grid generator for THIS month, given active dates on current page
+                const generateGridForPage = (activeDatesSet) => {
+                    const isPortrait = orient === 'p';
+                    const itemSize = isPortrait ? 28 : 32;
+                    const fontSize = isPortrait ? 12 : 14;
+                    const rowH = isPortrait ? 32 : 38;
 
-                return `
-                <div style="margin-bottom: 24px; border-left: 4px solid ${exportColors[c].bg}; padding-left: 16px; page-break-inside: avoid; width: 100%; box-sizing: border-box;">
-                    <div style="font-size: 14px; color: #64748b; font-weight: 800; margin-bottom: 4px;">${e.time} น. (${dateStrDisplay})</div>
-                    <div style="font-weight: 800; font-size: 18px; color: #1e293b; line-height: 1.3; word-break: break-word;">${escapeHTML(e.title)}</div>
-                    ${descHtml}
-                </div>
-                `;
-            };
+                    let gridHtml = '';
+                    for (let i = 0; i < start; i++) gridHtml += `<div></div>`;
+                    for (let d = 1; d <= dim; d++) {
+                        const dayStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                        const dayEvs = events.filter(e => isDateInRange(dayStr, e.date, e.endDate));
 
-            // --- ระบบคำนวณแบ่งหน้าอัตโนมัติ ตามความสูงของตัวอักษรจริงเพื่อป้องกันการตัดตก ---
-            const measureDiv = document.createElement('div');
-            measureDiv.style.width = '560px'; // ขนาดความกว้างของฝั่งขวา (ประมาณการ)
-            measureDiv.style.position = 'absolute';
-            measureDiv.style.visibility = 'hidden';
-            measureDiv.style.fontFamily = "'Kanit', sans-serif";
-            document.body.appendChild(measureDiv);
+                        let innerStyle = `width: ${itemSize}px; height: ${itemSize}px; display: flex; align-items: center; justify-content: center; margin: 0 auto; border-radius: 50%;`;
+                        let textStyle = `color: #64748b; font-weight: 600; font-size: ${fontSize}px;`;
 
-            const MAX_HEIGHT = 450; // ความสูงปลอดภัยสูงสุดต่อ 1 หน้า (เหลือเผื่อหัว/ท้ายกระดาษ)
-            const pagesData = [];
-            let currentPageEventsHtml = '';
-            let currentHeight = 0;
+                        if (dayEvs.length > 0) {
+                            const c = safeColor(dayEvs[0].color);
+                            const isActiveOnPage = activeDatesSet.has(dayStr);
 
-            for (const e of allActiveEvs) {
-                const evHtml = renderEventHtmlEx(e);
-                measureDiv.innerHTML = evHtml;
-                const evHeight = measureDiv.offsetHeight + 15; // เผื่อขอบ margin-bottom ด้านล่าง
+                            if (isActiveOnPage) {
+                                innerStyle += ` background-color: ${exportColors[c].bg}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`;
+                                textStyle = `color: white; font-weight: 800; font-size: ${fontSize}px;`;
+                            } else {
+                                innerStyle += ` background-color: ${exportColors[c].bg}20; border: 1px dashed ${exportColors[c].bg}40;`;
+                                textStyle = `color: ${exportColors[c].bg}; font-weight: 400; font-size: ${fontSize}px; opacity: 0.3;`;
+                            }
+                        }
 
-                // ถ้านำบล็อกใหม่มาใส่แล้วความสูงเกินหน้ากระดาษ ให้ตัดแบ่งขึ้นหน้าใหม่
-                if (currentHeight + evHeight > MAX_HEIGHT && currentPageEventsHtml !== '') {
-                    pagesData.push(currentPageEventsHtml);
-                    currentPageEventsHtml = evHtml;
-                    currentHeight = evHeight;
+                        gridHtml += `
+                            <div style="display: flex; justify-content: center; align-items: center; height: ${rowH}px;">
+                                <div style="${innerStyle}">
+                                    <span style="${textStyle}">${d}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    return gridHtml;
+                };
+
+                const renderEventHtmlEx = (e, modeParam) => {
+                    let descHtml = '';
+                    const c = safeColor(e.color);
+                    const dateStrDisplay = (e.endDate && e.endDate !== e.date)
+                        ? `${e.date.split('-').reverse().join('/')} ถึง ${e.endDate.split('-').reverse().join('/')}`
+                        : e.date.split('-').reverse().join('/');
+
+                    if ((modeParam === 'full' || modeParam === 'compact') && e.description) {
+                        let desc = e.description;
+                        let isTruncated = false;
+                        
+                        if (modeParam === 'compact') {
+                            const lines = desc.split('\n');
+                            if (lines.length > 2) { desc = lines.slice(0, 2).join('\n'); isTruncated = true; }
+                            if (desc.length > 150) { desc = desc.substring(0, 150); isTruncated = true; }
+                        }
+
+                        let moreText = isTruncated ? '... <span style="color: ' + exportColors[c].bg + '; font-weight: bold;">(อ่านต่อในเว็บไซต์)</span>' : '';
+                        descHtml = `<div style="font-size: 12px; color: #475569; line-height: 1.5; white-space: pre-wrap; margin-top: 4px; word-break: break-word;">${escapeHTML(desc)}${moreText}</div>`;
+                    }
+
+                    return `
+                    <div style="margin-bottom: ${modeParam === 'full' ? '16px' : '10px'}; border-left: 4px solid ${exportColors[c].bg}; padding-left: 12px; page-break-inside: avoid; width: 100%; box-sizing: border-box;">
+                        <div style="font-size: 12px; color: #64748b; font-weight: 800; margin-bottom: 2px;">${e.time} น. (${dateStrDisplay})</div>
+                        <div style="font-weight: 800; font-size: 16px; color: #1e293b; line-height: 1.2; word-break: break-word;">${escapeHTML(e.title)}</div>
+                        ${descHtml}
+                    </div>
+                    `;
+                };
+
+                const renderBasePage = (eventsHtml, pageDates, pageNumLocal, totalPagesLocal) => {
+                    const gridH = generateGridForPage(pageDates);
+
+                    // Adjust layout based on orientation (Both Landscape and Portrait have Calendar on LEFT, Content on RIGHT)
+                    let flexLayout = '';
+                    let calendarWidth = '';
+                    let calPadding = '20px';
+                    let titleScale = 1;
+
+                    if (orient === 'l') {
+                        flexLayout = 'flex-direction: row; gap: 40px;';
+                        calendarWidth = 'width: 380px; height: fit-content;';
+                    } else {
+                        // Portrait: Reduce gap and calendar width to fit 794px total width
+                        flexLayout = 'flex-direction: row; gap: 24px;';
+                        calendarWidth = 'width: 260px; height: fit-content;';
+                        calPadding = '16px';
+                        titleScale = 0.85; // Slightly scale down title elements in Portrait
+                    }
+
+                    return `
+                    <div id="capture-layout-wrapper-${globalPageNum++}" style="width: ${canvasW}px; height: ${canvasH}px; background-color: #f8fafc; padding: 40px; font-family: 'Kanit', sans-serif; display: flex; flex-direction: column; box-sizing: border-box;">
+                        <style>
+                            @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap'); 
+                            * { font-family: 'Kanit', sans-serif !important; }
+                        </style>
+                        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: ${orient === 'l' ? '25px' : '20px'}; transform: scale(${titleScale}); transform-origin: top center;">
+                            <div class="preview-title-capsule" style="background-color: #4b5563; color: white; border-radius: 999px; padding: 10px 60px; margin-bottom: 8px;">
+                                <span style="font-size: 32px; font-weight: 800; line-height: 1;">ตารางนัดหมาย</span>
+                            </div>
+                            <span style="font-size: 20px; font-weight: 600; color: #4b5563;">เดือน${thaiMonths[m]} ${y + 543} ${totalPagesLocal > 1 ? '(หน้า ' + pageNumLocal + '/' + totalPagesLocal + ')' : ''}</span>
+                        </div>
+                        <div style="display: flex; ${flexLayout} flex: 1; overflow: hidden;">
+                            <!-- ปฏิทิน -->
+                            <div style="${calendarWidth} flex-shrink: 0; background: white; padding: ${calPadding}; border-radius: 24px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #94a3b8; padding: 12px 20px; border-radius: 12px; color: white; font-weight: 900; font-size: ${orient === 'l' ? '18px' : '15px'}; letter-spacing: 1px;">
+                                    <span style="text-transform: uppercase;">${engMonths[m]}</span>
+                                    <span>${y}</span>
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: ${orient === 'l' ? '14px' : '12px'}; font-weight: 800; color: #cbd5e1; margin-bottom: 8px;">
+                                    <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; align-content: start;">
+                                    ${gridH}
+                                </div>
+                            </div>
+                            
+                            <!-- รายการกิจกรรม -->
+                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                                <h3 style="font-size: ${orient === 'l' ? '20px' : '18px'}; font-weight: 800; color: #1e293b; margin-bottom: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">รายการกิจกรรม</h3>
+                                <div style="flex: 1; overflow: visible;">
+                                    ${eventsHtml || '<div style="color: #94a3b8; font-weight: 500; font-size: 14px;">ไม่มีรายการกิจกรรมในเดือนนี้</div>'}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; margin-top: auto;">
+                            <div style="color: #cbd5e1; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Verified Appointment System • MORANASATECT</div>
+                            <div style="color: #94a3b8; font-size: 10px; font-weight: bold;">ข้อมูลเมื่อ: ${tsStr}</div>
+                        </div>
+                    </div>`;
+                };
+
+                // Pagination logic for THIS month
+                const measureDiv = document.createElement('div');
+                measureDiv.style.width = (orient === 'l' ? '560px' : '100%'); // Approximation
+                measureDiv.style.position = 'absolute';
+                measureDiv.style.visibility = 'hidden';
+                measureDiv.style.fontFamily = "'Kanit', sans-serif";
+                document.body.appendChild(measureDiv);
+
+                const pagesData = [];
+                let currentPageEventsHtml = '';
+                let currentPageDates = new Set();
+                let currentHeight = 0;
+
+                if (monthEvents.length === 0) {
+                     pagesData.push({ html: '', dates: new Set() });
                 } else {
-                    currentPageEventsHtml += evHtml;
-                    currentHeight += evHeight;
-                }
-            }
-              
-            // เก็บหน้าสุดท้ายเข้าอาร์เรย์
-            if (currentPageEventsHtml !== '') {
-                pagesData.push(currentPageEventsHtml);
-            }
-            if (pagesData.length === 0) {
-                pagesData.push('');
-            }
-              
-            document.body.removeChild(measureDiv);
+                    for (const e of monthEvents) {
+                        const evHtml = renderEventHtmlEx(e, mode);
+                        measureDiv.innerHTML = evHtml;
+                        const evHeight = measureDiv.offsetHeight + (mode === 'full' ? 16 : 10);
 
-            const totalPages = pagesData.length;
-            return pagesData.map((eventsHtml, idx) => renderBasePage(eventsHtml, idx + 1, totalPages, gridHtml));
+                        if (currentHeight + evHeight > contentMaxH && currentPageEventsHtml !== '') {
+                            pagesData.push({ html: currentPageEventsHtml, dates: new Set(currentPageDates) });
+                            currentPageEventsHtml = evHtml;
+                            const eDates = getEventDatesInMonth(e);
+                            currentPageDates = new Set(eDates);
+                            currentHeight = evHeight;
+                        } else {
+                            currentPageEventsHtml += evHtml;
+                            const eDates = getEventDatesInMonth(e);
+                            eDates.forEach(d => currentPageDates.add(d));
+                            currentHeight += evHeight;
+                        }
+                    }
+                    if (currentPageEventsHtml !== '') {
+                        pagesData.push({ html: currentPageEventsHtml, dates: currentPageDates });
+                    }
+                }
+                document.body.removeChild(measureDiv);
+
+                const totalPagesLocal = pagesData.length;
+                pagesData.forEach((data, idx) => {
+                    allPagesHtml.push(renderBasePage(data.html, data.dates, idx + 1, totalPagesLocal));
+                });
+            }
+
+            return { pagesHtml: allPagesHtml, orient };
         };
 
         window.cachedExportDataURLs = []; 
 
         async function openPreviewModal() {
+            // Set initial dates to current month if empty
+            const startInput = document.getElementById('prev-start-month');
+            const endInput = document.getElementById('prev-end-month');
+            if(!startInput.value) {
+                const mStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}`;
+                startInput.value = mStr;
+                endInput.value = mStr;
+            }
+            
+            document.getElementById('preview-modal').classList.remove('hidden');
+            document.getElementById('preview-modal').classList.add('flex');
+            updateScrollLock();
+            await refreshPreview();
+        }
+
+        async function refreshPreview() {
             const loading = document.getElementById('loading');
             const previewContainer = document.getElementById('preview-images-container');
             document.getElementById('loading-text').innerText = "กำลังสร้างภาพพรีวิว (อาจใช้เวลาสักครู่)...";
@@ -1580,18 +1733,21 @@
               
             try {
                 await document.fonts.ready;
-                const pagesHtml = generateExportPagesHTML();
+                // Allow UI to update loading state
+                await new Promise(r => setTimeout(r, 50));
+                
+                const { pagesHtml, orient } = generateExportPagesHTML();
                 const renderer = document.getElementById('offscreenRenderer');
                   
                 for (let i = 0; i < pagesHtml.length; i++) {
                     renderer.innerHTML = pagesHtml[i];
                     const wrap = renderer.querySelector(`[id^="capture-layout-wrapper"]`);
                     void wrap.offsetWidth; 
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 100)); // Render tick
                       
                     const dataUrl = await htmlToImage.toPng(wrap, {
                         quality: 1, 
-                        pixelRatio: 2, // ลดความละเอียดจาก 3 เหลือ 2 เพื่อลดขนาดไฟล์
+                        pixelRatio: 2, 
                         cacheBust: true, 
                         useCORS: true,
                         filter: (node) => {
@@ -1610,12 +1766,10 @@
                     if(previewContainer) previewContainer.appendChild(img);
                 }
                   
-                document.getElementById('preview-modal').classList.remove('hidden');
-                document.getElementById('preview-modal').classList.add('flex');
-                if(window.lucide) window.lucide.createIcons(); // วาดไอคอนใหม่หลังจากเปิด Modal
-                updateScrollLock();
+                if(window.lucide) window.lucide.createIcons();
             } catch (e) { 
                 showToast("การพรีวิวล้มเหลว: " + e.message, true); 
+                console.error(e);
             } finally { 
                 loading.classList.add('hidden'); 
             }
@@ -1623,9 +1777,16 @@
 
         function downloadFromPreview(type) {
             if (!window.cachedExportDataURLs.length) return;
-            const monthName = thaiMonths[currentDate.getMonth()];
-            const yearThai = currentDate.getFullYear() + 543;
-            const baseName = `ตารางนัดหมาย_${monthName}_${yearThai}`;
+            const startStr = document.getElementById('prev-start-month').value;
+            const endStr = document.getElementById('prev-end-month').value;
+            let baseName = `ตารางนัดหมาย`;
+            if(startStr === endStr) {
+                baseName += `_${startStr}`;
+            } else {
+                baseName += `_${startStr}_ถึง_${endStr}`;
+            }
+            
+            const orient = document.getElementById('prev-orient').value;
               
             if (type === 'image') {
                 window.cachedExportDataURLs.forEach((url, idx) => {
@@ -1636,18 +1797,16 @@
                 });
             } else {
                 const { jsPDF } = window.jspdf;
-                // เปิดใช้งานการบีบอัดไฟล์ PDF (compress: true)
                 const pdf = new jsPDF({
-                    orientation: 'l',
+                    orientation: orient,
                     unit: 'px',
-                    format: [1123, 794],
+                    format: orient === 'l' ? [1123, 794] : [794, 1123],
                     compress: true
                 });
 
                 window.cachedExportDataURLs.forEach((url, idx) => {
-                    if (idx > 0) pdf.addPage([1123, 794], 'l');
-                    // ใช้การประมวลผลแบบ 'FAST' เพื่อช่วยลดขนาดไฟล์รูปภาพใน PDF
-                    pdf.addImage(url, 'PNG', 0, 0, 1123, 794, undefined, 'FAST');
+                    if (idx > 0) pdf.addPage(orient === 'l' ? [1123, 794] : [794, 1123], orient);
+                    pdf.addImage(url, 'PNG', 0, 0, orient === 'l' ? 1123 : 794, orient === 'l' ? 794 : 1123, undefined, 'FAST');
                 });
                 pdf.save(`${baseName}.pdf`);
             }
@@ -1728,7 +1887,6 @@
                     const url = row.querySelector('.link-url').value;
                     const status = row.querySelector('.link-status').value;
                     if (label || url) {
-                        // เก็บค่า order อัตโนมัติตามตำแหน่งใน DOM ของหน้าเว็บที่ผู้ใช้ลากสลับ
                         links.push({ label, url, order: orderCounter++, status });
                     }
                 });
@@ -1757,10 +1915,9 @@
                     subTxt.innerText = origTxt;
                     subBtn.disabled = false;
                       
-                    selectedDate = date; // Update the view to the newly saved/moved date
+                    selectedDate = date; 
                     resetForm();
                       
-                    // บังคับเรนเดอร์ใหม่หลังบันทึก
                     renderModalDetails();
                     renderDashboard();
                     renderAdminHistory();
@@ -1788,16 +1945,14 @@
                         if (selectedDate) renderModalDetails();
                         document.getElementById('loading').classList.add('hidden');
                         checkSiteVisibility();
-                        checkAndShowAnnouncement(); // เช็คว่าพร้อมแสดงป๊อปอัปประกาศหรือยัง
+                        checkAndShowAnnouncement(); 
                           
-                        // สร้างประวัติสีตั้งต้นสำหรับหน้า Admin จากกิจกรรมเก่า
                         const evColors = [...new Set(events.map(e => getHexColor(e.color)))].filter(Boolean);
                         evColors.forEach(c => { if(!recentColors.includes(c)) recentColors.unshift(c); });
                         recentColors = recentColors.slice(0, 10);
                         if(window.lucide) window.lucide.createIcons();
                     });
                       
-                    // โหลดการตั้งค่าเว็บ และ การตั้งค่าประกาศควบคู่กัน
                     onSnapshot(doc(db, 'settings', 'site_config'), (snapshot) => {
                         if(snapshot.exists()) { siteActive = snapshot.data().is_active; }
                         updateSiteStatusUI();
@@ -1811,7 +1966,7 @@
                             popupConfig = { is_active: false, event_id: '', title: '', message: '' };
                         }
                         isDataLoaded.config = true;
-                        checkAndShowAnnouncement(); // เช็คว่าพร้อมแสดงป๊อปอัปประกาศหรือยัง
+                        checkAndShowAnnouncement(); 
                     });
                 }
             });
