@@ -497,6 +497,24 @@
             purple: { bg: '#a78bfa', text: '#ede9fe' }   
         };
 
+        // --- ระบบแจ้งเตือน (Toast) แทน alert() ---
+        function showToast(msg, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-xl z-[9999] text-sm font-bold text-white transition-all duration-300 transform -translate-y-full opacity-0 flex items-center gap-2 ${isError ? 'bg-rose-500' : 'bg-emerald-500'}`;
+            toast.innerHTML = `<i data-lucide="${isError ? 'alert-circle' : 'check-circle'}" class="w-5 h-5"></i> ${escapeHTML(msg)}`;
+            document.body.appendChild(toast);
+            if(window.lucide) window.lucide.createIcons();
+            
+            // Animate In
+            setTimeout(() => toast.classList.remove('-translate-y-full', 'opacity-0'), 10);
+            
+            // Animate Out
+            setTimeout(() => {
+                toast.classList.add('-translate-y-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         // --- Global Functions for HTML exposure ---
         window.toggleAdminModal = toggleAdminModal;
         window.handlePrevMonth = handlePrevMonth;
@@ -690,8 +708,9 @@
                 // ตั้งค่า hasShownPopup เป็น false เพื่อให้แอดมินทดสอบการแสดงผลได้ทันที
                 hasShownPopup = false; 
                 closeAdminAnnouncement();
+                showToast("อัปเดตตั้งค่าประกาศเรียบร้อยแล้ว");
             } catch (err) {
-                alert("บันทึกไม่สำเร็จ: " + err.message);
+                showToast("บันทึกประกาศไม่สำเร็จ: " + err.message, true);
             } finally {
                 submitBtn.innerText = originalText;
                 submitBtn.disabled = false;
@@ -736,12 +755,15 @@
                     }
                 }).join('');
                 
+                const dateInfo = (e.endDate && e.endDate !== e.date) ? `${formatThaiDate(e.date)} ถึง ${formatThaiDate(e.endDate)}` : formatThaiDate(e.date);
+                const dateHtml = (showFullDate || (e.endDate && e.endDate !== e.date)) ? `<p class="text-[8px] font-semibold opacity-70">${dateInfo}</p>` : '';
+
                 return `
                     <div onclick="openEventView('${e.id}')" class="event-card-clickable p-3 rounded-xl border relative transition-all bg-opacity-30 ${getColorClasses(e.color)}">
                         <div class="flex flex-col mb-1.5">
                             <div class="flex justify-between items-start mb-0.5">
                                 <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/60 border border-white/40 shadow-sm whitespace-nowrap">${e.time} น.</span>
-                                ${showFullDate ? `<p class="text-[8px] font-semibold opacity-70">${formatThaiDate(e.date)}</p>` : ''}
+                                ${dateHtml}
                             </div>
                             <h5 class="font-bold text-[11px] leading-tight mt-1 line-clamp-2">${escapeHTML(e.title)}</h5>
                         </div>
@@ -838,11 +860,17 @@
                             <button onclick="event.stopPropagation(); handleDeleteEvent('${e.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all hover:bg-red-100"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ลบ</button>
                         </div>
                     ` : '';
+
+                    const dateText = (e.endDate && e.endDate !== e.date) ? `<span class="text-[9px] font-bold text-slate-500 ml-2">ถึง ${formatThaiDate(e.endDate)}</span>` : '';
+
                     return `
                         <div onclick="openEventView('${e.id}')" class="event-card-clickable p-4 rounded-2xl border relative bg-opacity-30 ${getColorClasses(e.color)}">
                             <div class="flex flex-col mb-3">
                                 <div class="flex justify-between items-start mb-1">
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-white/60 border border-white/40 shadow-sm whitespace-nowrap">${e.time} น.</span>
+                                    <div class="flex items-center">
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-white/60 border border-white/40 shadow-sm whitespace-nowrap">${e.time} น.</span>
+                                        ${dateText}
+                                    </div>
                                 </div>
                                 <h5 class="font-bold text-sm leading-tight mt-1 line-clamp-3">${escapeHTML(e.title)}</h5>
                             </div>
@@ -864,9 +892,11 @@
             
             const tbody = document.getElementById('history-table-body');
             if(tbody) {
-                tbody.innerHTML = filtered.map(e => `
+                tbody.innerHTML = filtered.map(e => {
+                    const dateDisplay = e.endDate && e.endDate !== e.date ? `${e.date.split('-').reverse().join('/')}<br><span class="text-[9px] text-slate-400">ถึง ${e.endDate.split('-').reverse().join('/')}</span>` : e.date.split('-').reverse().join('/');
+                    return `
                     <tr class="hover:bg-slate-50/50 transition-colors">
-                        <td class="px-4 py-3 text-[11px] font-medium text-slate-500">${e.date.split('-').reverse().join('/')}</td>
+                        <td class="px-4 py-3 text-[11px] font-medium text-slate-500 leading-tight">${dateDisplay}</td>
                         <td class="px-4 py-3 font-semibold text-slate-700">${escapeHTML(e.title)}</td>
                         <td class="px-4 py-3 text-[11px] text-slate-500">${e.time} น.</td>
                         <td class="px-4 py-3 text-center">
@@ -876,7 +906,7 @@
                             </div>
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
             }
             if(window.lucide) window.lucide.createIcons();
         }
@@ -945,7 +975,7 @@
             if (!e) return;
 
             document.getElementById('view-ev-title').innerText = e.title;
-            document.getElementById('view-ev-date').innerText = formatThaiDate(e.date) + (e.endDate ? ` - ${formatThaiDate(e.endDate)}` : '');
+            document.getElementById('view-ev-date').innerText = formatThaiDate(e.date) + ((e.endDate && e.endDate !== e.date) ? ` ถึง ${formatThaiDate(e.endDate)}` : '');
             document.getElementById('view-ev-time').innerText = e.time + ' น.';
             
             const descEl = document.getElementById('view-ev-desc');
@@ -1196,8 +1226,12 @@
             const newStatus = !siteActive;
             try {
                 await setDoc(doc(db, 'settings', 'site_config'), { is_active: newStatus });
-            } catch (e) { console.error(e); }
+                showToast(newStatus ? 'เปิดใช้งานเว็บไซต์แล้ว' : 'ปิดปรับปรุงเว็บไซต์ชั่วคราว');
+            } catch (e) { showToast("เกิดข้อผิดพลาด", true); }
         }
+
+        // ตัวช่วยสำหรับดึงสี กรณีที่ข้อมูลเก่าไม่มีค่าสี เพื่อไม่ให้ระบบพังตอนพรีวิว
+        const safeColor = (c) => (c && exportColors[c]) ? c : 'blue';
 
         const generateExportPagesHTML = () => {
             const y = currentDate.getFullYear(), m = currentDate.getMonth();
@@ -1207,11 +1241,39 @@
             // เพิ่มชุดเวลาการทำข้อมูลปัจจุบัน
             const now = new Date();
             const tsStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
+            const todayStr = getTodayString(); 
             
-            const renderBasePage = (eventsHtml, pageNum, totalPages, gridHtml) => {
+            let gridHtml = '';
+            for (let i = 0; i < start; i++) gridHtml += `<div></div>`;
+            for (let d = 1; d <= dim; d++) {
+                const dayStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dayEvs = events.filter(e => isDateInRange(dayStr, e.date, e.endDate));
+                
+                let innerStyle = 'width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; margin: 0 auto; border-radius: 50%;';
+                let textStyle = 'color: #64748b; font-weight: 600; font-size: 16px;';
+
+                if (dayEvs.length > 0) {
+                    const c = safeColor(dayEvs[0].color);
+                    innerStyle += ` background-color: ${exportColors[c].bg}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`;
+                    textStyle = 'color: white; font-weight: 800; font-size: 16px;';
+                }
+
+                gridHtml += `
+                    <div style="display: flex; justify-content: center; align-items: center; height: 44px;">
+                        <div style="${innerStyle}">
+                            <span style="${textStyle}">${d}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const renderBasePage = (eventsHtml, pageNum, totalPages, gridH) => {
                 return `
                 <div id="capture-layout-wrapper-${pageNum}" style="width: 1123px; height: 794px; background-color: #f8fafc; padding: 40px; font-family: 'Kanit', sans-serif; display: flex; flex-direction: column; box-sizing: border-box;">
-                    <style>@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap'); * { font-family: 'Kanit', sans-serif !important; }</style>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap'); 
+                        * { font-family: 'Kanit', sans-serif !important; }
+                    </style>
                     <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 25px;">
                         <div class="preview-title-capsule" style="background-color: #4b5563; color: white; border-radius: 999px; padding: 12px 70px; margin-bottom: 10px;">
                             <span style="font-size: 40px; font-weight: 800; line-height: 1;">ตารางนัดหมาย</span>
@@ -1219,27 +1281,30 @@
                         <span style="font-size: 22px; font-weight: 600; color: #4b5563;">เดือน${thaiMonths[m]} ${y + 543} ${totalPages > 1 ? '(หน้า ' + pageNum + '/' + totalPages + ')' : ''}</span>
                     </div>
                     <div style="display: flex; gap: 40px; flex: 1; overflow: hidden;">
-                        <!-- ปฏิทินแสดงผลทุกหน้าเหมือนกัน -->
-                        <div style="width: 440px; flex-shrink: 0; background: white; padding: 20px; border-radius: 30px; border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; background: #94a3b8; padding: 12px 25px; border-radius: 15px; color: white; font-weight: 900; font-size: 20px;">
-                                <span>${engMonths[m]}</span><span>${y}</span>
+                        <!-- ปฏิทินฝั่งซ้าย (Inline Styles) -->
+                        <div style="width: 440px; flex-shrink: 0; background: white; padding: 25px; border-radius: 30px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #94a3b8; padding: 16px 25px; border-radius: 16px; color: white; font-weight: 900; font-size: 22px; letter-spacing: 1px;">
+                                <span style="text-transform: uppercase;">${engMonths[m]}</span>
+                                <span>${y}</span>
                             </div>
                             <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 16px; font-weight: 800; color: #cbd5e1; margin-bottom: 10px;">
                                 <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
                             </div>
-                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); flex: 1;">${gridHtml}</div>
+                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 8px; flex: 1; align-content: start;">
+                                ${gridH}
+                            </div>
                         </div>
                         
-                        <!-- ช่องแสดงรายการ (ข้อความไม่ถูกตัดล้นออก) -->
+                        <!-- ช่องแสดงรายการฝั่งขวา -->
                         <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                            <h3 style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">รายการกิจกรรม</h3>
+                            <h3 style="font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">รายการกิจกรรม</h3>
                             <div style="flex: 1; overflow: visible;">
-                                ${eventsHtml || '<div style="color: #94a3b8;">ไม่มีรายการ</div>'}
+                                ${eventsHtml || '<div style="color: #94a3b8; font-weight: 500; font-size: 16px;">ไม่มีรายการกิจกรรมในเดือนนี้</div>'}
                             </div>
                         </div>
                     </div>
                     
-                    <!-- ส่วน Footer แสดงข้อมูลเวลาอัปเดตมุมขวาล่าง -->
+                    <!-- ส่วน Footer -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; margin-top: 10px;">
                         <div style="color: #cbd5e1; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Verified Appointment System • MORANASATECT</div>
                         <div style="color: #94a3b8; font-size: 12px; font-weight: bold;">ข้อมูลเมื่อ: ${tsStr}</div>
@@ -1250,6 +1315,7 @@
             const renderEventHtml = (e) => {
                 let desc = e.description || '';
                 let isTruncated = false;
+                const c = safeColor(e.color);
                 
                 // ตัดคำให้อยู่ใน 2 บรรทัด หรือความยาวไม่เกิน 150 ตัวอักษร
                 const lines = desc.split('\n');
@@ -1262,46 +1328,28 @@
                     isTruncated = true;
                 }
 
+                let descHtml = '';
+                if (e.description) {
+                    let moreText = '';
+                    if (isTruncated) {
+                        moreText = '... <span style="color: ' + exportColors[c].bg + '; font-weight: bold;">(ดูข้อมูลเพิ่มเติมผ่านลิ้งก์เว็บไซต์)</span>';
+                    }
+                    descHtml = '<div style="font-size: 14px; color: #475569; line-height: 1.6; white-space: pre-wrap; margin-top: 6px; word-break: break-word;">' + escapeHTML(desc) + moreText + '</div>';
+                }
+
+                // จัดรูปแบบวันที่ หากมีหลายวันให้แสดง "ถึงวันที่"
+                const dateStrDisplay = (e.endDate && e.endDate !== e.date) 
+                    ? `${e.date.split('-').reverse().join('/')} ถึง ${e.endDate.split('-').reverse().join('/')}` 
+                    : e.date.split('-').reverse().join('/');
+
                 return `
-                <div style="margin-bottom: 15px; border-left: 5px solid ${exportColors[e.color].bg}; padding-left: 15px; page-break-inside: avoid; width: 100%; box-sizing: border-box;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <div style="font-size: 14px; color: #64748b; font-weight: bold;">${e.date.split('-').reverse().join('/')}</div>
-                        <div style="font-size: 14px; color: #475569; font-weight: bold; background-color: #f1f5f9; padding: 2px 8px; border-radius: 6px;">${e.time} น.</div>
-                    </div>
-                    <div style="font-weight: 800; font-size: 18px; color: #1e293b; margin-bottom: ${e.description ? '8px' : '4px'}; word-break: break-word;">${escapeHTML(e.title)}</div>
-                    ${e.description ? `<div style="font-size: 13px; color: #475569; line-height: 1.5; white-space: pre-wrap; background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 10px 14px; width: 100%; box-sizing: border-box; word-break: break-word;">${escapeHTML(desc)}${isTruncated ? `... <span style="color: ${exportColors[e.color].bg}; font-weight: bold;">(ดูข้อมูลเพิ่มเติมผ่านลิ้งก์เว็บไซต์)</span>` : ''}</div>` : ''}
+                <div style="margin-bottom: 24px; border-left: 4px solid ${exportColors[c].bg}; padding-left: 16px; page-break-inside: avoid; width: 100%; box-sizing: border-box;">
+                    <div style="font-size: 14px; color: #64748b; font-weight: 800; margin-bottom: 4px;">${e.time} น. (${dateStrDisplay})</div>
+                    <div style="font-weight: 800; font-size: 18px; color: #1e293b; line-height: 1.3; word-break: break-word;">${escapeHTML(e.title)}</div>
+                    ${descHtml}
                 </div>
                 `;
             };
-
-            let grid = '';
-            for (let i = 0; i < start; i++) grid += `<div></div>`;
-            for (let d = 1; d <= dim; d++) {
-                const dayStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const isToday = dayStr === todayStr;
-                const isSelected = dayStr === selectedDate;
-                const isPast = dayStr < todayStr;
-                
-                const dayEvs = events.filter(e => isDateInRange(dayStr, e.date, e.endDate));
-                let dots = '';
-                if(dayEvs.length) {
-                    dots = `<div class="absolute bottom-1.5 flex gap-0.5">${dayEvs.slice(0,3).map(e => `<span class="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${getDotColor(e.color)}"></span>`).join('')}</div>`;
-                }
-                
-                let borderClass = 'border-slate-50 text-slate-700 bg-white';
-                if (isToday) borderClass = 'border-indigo-500 text-indigo-700 bg-indigo-50';
-
-                const ringClass = isSelected ? 'ring-4 ring-indigo-200 z-10' : '';
-                const opacityClass = isPast && !isToday ? 'opacity-50 grayscale-[0.5]' : '';
-
-                grid += `
-                    <div class="relative aspect-square flex flex-col items-center justify-center rounded-xl border-2 
-                            ${ringClass} ${borderClass} shadow-sm ${opacityClass}">
-                        <span class="text-xs sm:text-sm font-bold">${d}</span>
-                        ${dots}
-                    </div>
-                `;
-            }
 
             // --- ระบบคำนวณแบ่งหน้าอัตโนมัติ ตามความสูงของตัวอักษรจริงเพื่อป้องกันการตัดตก ---
             const measureDiv = document.createElement('div');
@@ -1343,7 +1391,7 @@
             document.body.removeChild(measureDiv);
 
             const totalPages = pagesData.length;
-            return pagesData.map((eventsHtml, idx) => renderBasePage(eventsHtml, idx + 1, totalPages, grid));
+            return pagesData.map((eventsHtml, idx) => renderBasePage(eventsHtml, idx + 1, totalPages, gridHtml));
         };
 
         window.cachedExportDataURLs = []; 
@@ -1389,7 +1437,7 @@
                 document.getElementById('preview-modal').classList.add('flex');
                 updateScrollLock();
             } catch (e) { 
-                alert("ล้มเหลว: " + e.message); 
+                showToast("การพรีวิวล้มเหลว: " + e.message, true); 
             } finally { 
                 loading.classList.add('hidden'); 
             }
@@ -1444,10 +1492,13 @@
 
         async function handleDeleteEvent(id) {
             if (isAdmin && confirm("ยืนยันการลบ?")) {
-                await deleteDoc(doc(db, 'calendar_events', id));
-                renderAdminHistory();
-                renderModalDetails();
-                renderCalendar();
+                try {
+                    await deleteDoc(doc(db, 'calendar_events', id));
+                    showToast('ลบกิจกรรมสำเร็จ');
+                    renderAdminHistory();
+                    renderModalDetails();
+                    renderCalendar();
+                } catch(e) { showToast('ลบไม่สำเร็จ: '+e.message, true); }
             }
         }
 
@@ -1462,6 +1513,7 @@
                     isAdmin = true;
                     closeAuthModal();
                     updateAdminUI();
+                    showToast('เข้าสู่ระบบแอดมินสำเร็จ');
                 } else {
                     const err = document.getElementById('auth-error');
                     if (err) err.classList.remove('hidden');
@@ -1510,8 +1562,10 @@
                     
                     if (id) {
                         await updateDoc(doc(db, 'calendar_events', id), eventData);
+                        showToast('อัปเดตกิจกรรมสำเร็จ');
                     } else {
                         await addDoc(collection(db, 'calendar_events'), eventData);
+                        showToast('เพิ่มนัดหมายใหม่สำเร็จ');
                     }
                     
                     subTxt.innerText = origTxt;
@@ -1528,7 +1582,7 @@
 
                 } catch (err) {
                     console.error(err);
-                    alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + err.message);
+                    showToast('เกิดข้อผิดพลาดในการบันทึก: ' + err.message, true);
                 }
             });
         }
