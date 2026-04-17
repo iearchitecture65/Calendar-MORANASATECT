@@ -249,7 +249,7 @@
         HIDDEN RENDERER (อ้างอิงวิธีทำจากไฟล์ของคุณ)
         ซ่อนไว้นอกหน้าจอแบบสมบูรณ์ เพื่อใช้เป็นกระดานสำหรับวาดภาพ 
     -->
-    <div id="offscreenRenderer" style="position: fixed; top: 0; left: -1000vw; z-index: -9999; pointer-events: none; opacity: 0;"></div>
+    <div id="offscreenRenderer" style="position: fixed; top: 0; left: -2000vw; z-index: -9999; pointer-events: none; opacity: 0;"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -534,7 +534,7 @@
                     
                     eventsHtml += `
                     <div style="margin-bottom: 20px; page-break-inside: avoid;">
-                        <div style="display: inline-block; background-color: ${c.bg}; color: white; border-radius: 999px; padding: 10px 24px; font-size: 24px; font-weight: 700; margin-bottom: 15px; line-height: 1;">
+                        <div style="display: inline-block; background-color: ${c.bg}; color: white; border-radius: 999px; padding: 10px 24px; font-size: 24px; font-weight: 700; margin-bottom: 15px; line-height: 1; white-space: nowrap;">
                             ${escapeHTML(title)}
                         </div>
                     `;
@@ -606,12 +606,18 @@
             return `
             <div id="capture-layout-wrapper" style="width: 1123px; height: 794px; background-color: #f8fafc; padding: 40px; display: flex; flex-direction: column; position: relative; font-family: 'Kanit', sans-serif; box-sizing: border-box;">
                 
+                <!-- บังคับโหลดฟอนต์ใน iframe renderer -->
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap');
+                    * { font-family: 'Kanit', sans-serif !important; }
+                </style>
+
                 <!-- ส่วนหัว -->
                 <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
-                    <div style="background-color: #4b5563; color: white; border-radius: 999px; padding: 12px 70px; margin-bottom: 10px;">
-                        <span style="font-size: 46px; font-weight: 800; line-height: 1;">ตารางนัดหมาย</span>
+                    <div style="background-color: #4b5563; color: white; border-radius: 999px; padding: 12px 70px; margin-bottom: 10px; white-space: nowrap; display: inline-flex; justify-content: center; align-items: center;">
+                        <span style="font-size: 46px; font-weight: 800; line-height: 1; white-space: nowrap;">ตารางนัดหมาย</span>
                     </div>
-                    <span style="color: #4b5563; font-size: 26px; font-weight: 600; line-height: 1;">สำหรับเดือน${thaiMonths[month]} ${year + 543}</span>
+                    <span style="color: #4b5563; font-size: 26px; font-weight: 600; line-height: 1; white-space: nowrap;">สำหรับเดือน${thaiMonths[month]} ${year + 543}</span>
                 </div>
 
                 <!-- ส่วนเนื้อหา -->
@@ -667,24 +673,19 @@
                 // การหน่วงเวลาให้เบราว์เซอร์ปรับโครงสร้าง CSS 
                 const cardToCapture = document.getElementById('capture-layout-wrapper');
                 void cardToCapture.offsetWidth; 
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 800)); // เพิ่มเวลาให้ฟอนต์โหลดชัวร์ๆ
                 
-                // ใช้เทคนิคการเรนเดอร์หลายรอบ (warm-up) ตามแบบในไฟล์อ้างอิงของคุณ เพื่อความเสถียรของฟอนต์
+                // Warm-up รอบที่ 1
                 try { await htmlToImage.toPng(cardToCapture, { cacheBust: true, useCORS: true, pixelRatio: 1 }); } catch (e) {}
-                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 400));
 
-                try { await htmlToImage.toPng(cardToCapture, { cacheBust: true, useCORS: true, pixelRatio: 2 }); } catch (e) {}
-                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-                await new Promise(r => setTimeout(r, 500));
-                
                 // ถ่ายจริงรอบสุดท้าย ความคมชัดสูงสุด x3
                 const dataUrl = await htmlToImage.toPng(cardToCapture, {
                     quality: 1,
                     pixelRatio: 3,
                     cacheBust: true,
                     useCORS: true,
-                    style: { transform: 'none', margin: '0' } // ป้องกันอาการเพี้ยน
+                    style: { transform: 'none', margin: '0' }
                 });
                 
                 // เคลียร์พื้นที่วาดภาพ
@@ -701,7 +702,7 @@
 
             } catch (error) {
                 console.error("Preview error:", error);
-                document.getElementById('offscreenRenderer').innerHTML = ''; // clear on error
+                document.getElementById('offscreenRenderer').innerHTML = ''; 
                 alert("เกิดข้อผิดพลาดในการสร้างภาพตัวอย่าง");
             } finally {
                 loadingEl.classList.add('hidden');
