@@ -316,17 +316,23 @@
                             <input type="text" id="ev-title" required class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                         </div>
                         <div class="flex gap-2">
+                            <div class="flex-[1.5]">
+                                <label class="block text-[10px] sm:text-xs font-medium text-slate-500 mb-1">วันที่เริ่มกิจกรรม *</label>
+                                <input type="date" id="ev-date" required onchange="document.getElementById('ev-enddate').min = this.value" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                            </div>
                             <div class="flex-1">
                                 <label class="block text-[10px] sm:text-xs font-medium text-slate-500 mb-1">เวลา</label>
-                                <input type="time" id="ev-time" value="09:00" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm">
+                                <input type="time" id="ev-time" value="09:00" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                             </div>
+                        </div>
+                        <div class="flex gap-2">
                             <div class="flex-1">
-                                <label class="block text-[10px] sm:text-xs font-medium text-slate-500 mb-1">ถึงวันที่</label>
-                                <input type="date" id="ev-enddate" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm">
+                                <label class="block text-[10px] sm:text-xs font-medium text-slate-500 mb-1">ถึงวันที่ (ไม่บังคับ)</label>
+                                <input type="date" id="ev-enddate" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                             </div>
-                            <div class="w-[70px]">
+                            <div class="w-[80px]">
                                 <label class="block text-[10px] sm:text-xs font-medium text-slate-500 mb-1 tracking-tighter">สี</label>
-                                <select id="ev-color" class="w-full px-1 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm">
+                                <select id="ev-color" class="w-full px-1 py-1.5 bg-white border border-slate-200 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                                     <option value="blue">น้ำเงิน</option>
                                     <option value="green">เขียว</option>
                                     <option value="orange">ส้ม</option>
@@ -1065,12 +1071,32 @@
             }
         });
 
+        function openDayDetails(ds) { 
+            selectedDate = ds; 
+            const ed = document.getElementById('ev-enddate');
+            if(ed) ed.min = ds;
+            const evDate = document.getElementById('ev-date');
+            if(evDate) evDate.value = ds; // Set default start date to selected day
+            renderModalDetails(); 
+            renderCalendar();
+            document.getElementById('details-modal').classList.remove('hidden'); 
+            document.getElementById('details-modal').classList.add('flex'); 
+            updateScrollLock();
+        }
+
         function handleEditEvent(id) {
             const e = events.find(item => item.id === id);
             if (!e) return;
-            selectedDate = e.date;
+            
+            if(document.getElementById('details-modal').classList.contains('hidden')) {
+                openDayDetails(e.date);
+            } else {
+                selectedDate = e.date;
+            }
+
             document.getElementById('ev-id').value = e.id;
             document.getElementById('ev-title').value = e.title;
+            document.getElementById('ev-date').value = e.date;
             document.getElementById('ev-time').value = e.time;
             document.getElementById('ev-enddate').value = e.endDate || '';
             document.getElementById('ev-color').value = e.color || 'blue';
@@ -1102,9 +1128,6 @@
             document.getElementById('admin-form-container').classList.remove('hidden');
             document.getElementById('admin-form-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-            if(document.getElementById('details-modal').classList.contains('hidden')) {
-                openDayDetails(e.date);
-            }
             if(window.lucide) window.lucide.createIcons();
         }
 
@@ -1112,6 +1135,10 @@
             const form = document.getElementById('add-event-form');
             if(form) form.reset();
             document.getElementById('ev-id').value = '';
+            
+            const evDate = document.getElementById('ev-date');
+            if (evDate && selectedDate) evDate.value = selectedDate;
+
             const linksContainer = document.getElementById('links-form-container');
             if(linksContainer) linksContainer.innerHTML = '';
             
@@ -1396,17 +1423,6 @@
         function handleNextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
         function handleGoToday() { currentDate = new Date(); renderCalendar(); }
         
-        function openDayDetails(ds) { 
-            selectedDate = ds; 
-            const ed = document.getElementById('ev-enddate');
-            if(ed) ed.min = ds;
-            renderModalDetails(); 
-            renderCalendar();
-            document.getElementById('details-modal').classList.remove('hidden'); 
-            document.getElementById('details-modal').classList.add('flex'); 
-            updateScrollLock();
-        }
-        
         function closeDetailsModal() { 
             document.getElementById('details-modal').classList.add('hidden'); 
             document.getElementById('details-modal').classList.remove('flex'); 
@@ -1431,6 +1447,7 @@
                 await deleteDoc(doc(db, 'calendar_events', id));
                 renderAdminHistory();
                 renderModalDetails();
+                renderCalendar();
             }
         }
 
@@ -1460,6 +1477,7 @@
                 
                 const id = document.getElementById('ev-id').value;
                 const title = document.getElementById('ev-title').value;
+                const date = document.getElementById('ev-date').value;
                 const time = document.getElementById('ev-time').value;
                 const endDate = document.getElementById('ev-enddate').value;
                 const color = document.getElementById('ev-color').value;
@@ -1479,7 +1497,7 @@
 
                 const eventData = { 
                     title, time, endDate, color, description: desc, links, 
-                    date: selectedDate 
+                    date: date 
                 };
 
                 try {
@@ -1498,12 +1516,15 @@
                     
                     subTxt.innerText = origTxt;
                     subBtn.disabled = false;
+                    
+                    selectedDate = date; // Update the view to the newly saved/moved date
                     resetForm();
                     
                     // บังคับเรนเดอร์ใหม่หลังบันทึก
                     renderModalDetails();
                     renderDashboard();
                     renderAdminHistory();
+                    renderCalendar();
 
                 } catch (err) {
                     console.error(err);
