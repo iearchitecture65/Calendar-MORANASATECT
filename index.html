@@ -458,6 +458,17 @@
             }
         };
 
+        // ฟังก์ชันเช็คสถานะว่าลิงก์ถูกล็อกหรือไม่
+        const isLinkLocked = (link, eventDate) => {
+            if (!link) return false;
+            if (link.status === 'always_open') return false; // แอดมินตั้งให้เปิดเสมอ
+            if (link.status === 'locked') return true;       // แอดมินตั้งให้ล็อกเสมอ
+            
+            // auto (เปิดตามวัน) หรือกรณีข้อมูลเก่าที่ไม่มี status
+            const todayStr = getTodayString();
+            return todayStr < eventDate; // ถ้าวันนี้ยังไม่ถึงวันนัดหมาย ให้ล็อกไว้
+        };
+
         function renderDashboard() {
             const todayStr = getTodayString();
             const todayEvents = events.filter(e => isDateInRange(todayStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
@@ -468,11 +479,23 @@
 
             const eventToHtml = (e, showFullDate = false) => {
                 const links = (e.links || []).sort((a,b) => (parseInt(a.order) || 0) - (parseInt(b.order) || 0));
-                const linksHtml = links.map(l => `
-                    <a href="${escapeHTML(l.url)}" target="_blank" onclick="event.stopPropagation()" class="px-2 py-0.5 bg-white/60 hover:bg-white text-[9px] font-bold rounded border border-white/40 flex items-center gap-1 transition-all shadow-sm">
-                        <i data-lucide="external-link" class="w-2 h-2"></i> ${escapeHTML(l.label || 'เปิดลิงก์')}
-                    </a>
-                `).join('');
+                const linksHtml = links.map(l => {
+                    const locked = isLinkLocked(l, e.date);
+                    if (locked) {
+                        return `
+                            <span onclick="event.stopPropagation()" class="px-2 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-bold rounded border border-slate-200 flex items-center gap-1 shadow-sm cursor-not-allowed" title="ลิงก์จะเปิดใช้งานในวันที่นัดหมาย">
+                                <i data-lucide="lock" class="w-2 h-2"></i> ${escapeHTML(l.label || 'ลิงก์')}
+                            </span>
+                        `;
+                    } else {
+                        return `
+                            <a href="${escapeHTML(l.url)}" target="_blank" onclick="event.stopPropagation()" class="px-2 py-0.5 bg-white/60 hover:bg-white text-[9px] font-bold rounded border border-white/40 flex items-center gap-1 transition-all shadow-sm">
+                                <i data-lucide="external-link" class="w-2 h-2"></i> ${escapeHTML(l.label || 'เปิดลิงก์')}
+                            </a>
+                        `;
+                    }
+                }).join('');
+                
                 return `
                     <div onclick="openEventView('${e.id}')" class="event-card-clickable p-3 rounded-xl border relative transition-all bg-opacity-30 ${getColorClasses(e.color)}">
                         <div class="flex flex-col mb-1.5">
@@ -535,11 +558,23 @@
             } else {
                 container.innerHTML = selEvs.map(e => {
                     const sortedLinks = (e.links || []).sort((a,b) => (parseInt(a.order) || 0) - (parseInt(b.order) || 0));
-                    const linksHtml = sortedLinks.map(l => `
-                        <a href="${escapeHTML(l.url)}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white/70 text-[10px] font-bold rounded-lg border border-white/50 flex items-center gap-1.5 shadow-sm transition-all hover:bg-white">
-                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> ${escapeHTML(l.label || 'ลิงก์')}
-                        </a>
-                    `).join('');
+                    const linksHtml = sortedLinks.map(l => {
+                        const locked = isLinkLocked(l, e.date);
+                        if (locked) {
+                            return `
+                                <span onclick="event.stopPropagation()" class="px-3 py-1.5 bg-slate-100 text-slate-400 text-[10px] font-bold rounded-lg border border-slate-200 flex items-center gap-1.5 shadow-sm cursor-not-allowed" title="ลิงก์จะเปิดใช้งานในวันที่นัดหมาย">
+                                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> ${escapeHTML(l.label || 'ลิงก์')} (ล็อก)
+                                </span>
+                            `;
+                        } else {
+                            return `
+                                <a href="${escapeHTML(l.url)}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white/70 text-[10px] font-bold rounded-lg border border-white/50 flex items-center gap-1.5 shadow-sm transition-all hover:bg-white">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> ${escapeHTML(l.label || 'ลิงก์')}
+                                </a>
+                            `;
+                        }
+                    }).join('');
+                    
                     const adminActions = isAdmin ? `
                         <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-200/40">
                             <button onclick="event.stopPropagation(); handleEditEvent('${e.id}')" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold flex items-center gap-1 hover:bg-indigo-100 transition-all"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i> แก้ไข</button>
@@ -672,12 +707,26 @@
             const sortedLinks = (e.links || []).sort((a,b) => (parseInt(a.order) || 0) - (parseInt(b.order) || 0));
             
             if (sortedLinks.length > 0) {
-                linksContainer.innerHTML = sortedLinks.map(l => `
-                    <a href="${escapeHTML(l.url)}" target="_blank" class="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group shadow-sm">
-                        <span class="font-bold text-slate-700 group-hover:text-indigo-600">${escapeHTML(l.label || 'เปิดลิงก์')}</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-indigo-500"></i>
-                    </a>
-                `).join('');
+                linksContainer.innerHTML = sortedLinks.map(l => {
+                    const locked = isLinkLocked(l, e.date);
+                    if (locked) {
+                        return `
+                            <div class="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl cursor-not-allowed shadow-sm opacity-70" title="ลิงก์จะเปิดใช้งานเมื่อถึงวันที่นัดหมาย">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="lock" class="w-4 h-4 text-slate-400"></i>
+                                    <span class="font-bold text-slate-400">${escapeHTML(l.label || 'ลิงก์')} <span class="text-[10px] font-normal">(ยังไม่ถึงกำหนด)</span></span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <a href="${escapeHTML(l.url)}" target="_blank" class="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/30 transition-all group shadow-sm">
+                                <span class="font-bold text-slate-700 group-hover:text-indigo-600">${escapeHTML(l.label || 'เปิดลิงก์')}</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-indigo-500"></i>
+                            </a>
+                        `;
+                    }
+                }).join('');
                 linksSection.classList.remove('hidden');
             } else {
                 linksSection.classList.add('hidden');
@@ -695,15 +744,23 @@
             updateScrollLock();
         }
 
-        function addLinkFormRow(data = { label: '', url: '', order: '' }) {
+        function addLinkFormRow(data = { label: '', url: '', order: '', status: 'auto' }) {
             const container = document.getElementById('links-form-container');
             if(!container) return;
             const row = document.createElement('div');
-            row.className = "link-form-row grid grid-cols-12 gap-2 bg-white p-2 rounded-lg border border-slate-100 shadow-sm mb-2 fade-in";
+            // ปรับ Grid จาก 12 คอลัมน์ให้แบ่งพื้นที่ใหม่เพื่อให้มีช่องสถานะ
+            row.className = "link-form-row grid grid-cols-12 gap-2 bg-white p-2 rounded-lg border border-slate-100 shadow-sm mb-2 fade-in items-center";
             row.innerHTML = `
-                <div class="col-span-4"><input type="text" placeholder="ชื่อปุ่ม" value="${data.label}" class="link-label w-full px-2 py-1 text-[10px] border border-slate-100 rounded bg-slate-50 focus:bg-white outline-none"></div>
-                <div class="col-span-5"><input type="url" placeholder="URL..." value="${data.url}" class="link-url w-full px-2 py-1 text-[10px] border border-slate-100 rounded bg-slate-50 focus:bg-white outline-none"></div>
-                <div class="col-span-2"><input type="number" placeholder="ที่" value="${data.order}" class="link-order w-full px-1 py-1 text-[10px] border border-slate-100 rounded bg-slate-50 text-center outline-none"></div>
+                <div class="col-span-3"><input type="text" placeholder="ชื่อปุ่ม" value="${escapeHTML(data.label||'')}" class="link-label w-full px-2 py-1 text-[10px] border border-slate-100 rounded bg-slate-50 focus:bg-white outline-none"></div>
+                <div class="col-span-4"><input type="url" placeholder="URL..." value="${data.url||''}" class="link-url w-full px-2 py-1 text-[10px] border border-slate-100 rounded bg-slate-50 focus:bg-white outline-none"></div>
+                <div class="col-span-3">
+                    <select class="link-status w-full px-1 py-1 text-[9px] border border-slate-100 rounded bg-slate-50 outline-none text-slate-600">
+                        <option value="auto" ${data.status === 'auto' || !data.status ? 'selected' : ''}>เปิดตามวัน</option>
+                        <option value="always_open" ${data.status === 'always_open' ? 'selected' : ''}>เปิดเสมอ</option>
+                        <option value="locked" ${data.status === 'locked' ? 'selected' : ''}>ล็อกไว้</option>
+                    </select>
+                </div>
+                <div class="col-span-1"><input type="number" placeholder="ที่" value="${data.order||''}" class="link-order w-full px-1 py-1 text-[10px] border border-slate-100 rounded bg-slate-50 text-center outline-none"></div>
                 <div class="col-span-1 flex items-center justify-center"><button type="button" onclick="this.parentElement.parentElement.remove(); updateScrollLock();" class="text-red-400 hover:text-red-600 transition-colors"><i data-lucide="minus-circle" class="w-4 h-4"></i></button></div>
             `;
             container.appendChild(row);
@@ -806,11 +863,12 @@
             const y = currentDate.getFullYear(), m = currentDate.getMonth();
             const dim = new Date(y, m+1, 0).getDate(), start = new Date(y, m, 1).getDay();
             const allActiveEvs = events.filter(e => e.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).sort((a,b) => a.date.localeCompare(b.date));
-            const pages = [];
-            const itemsPerPageP1 = 5;
-            const itemsPerPageNext = 10;
             
-            const renderBasePage = (contentHtml, pageNum, totalPages) => {
+            // เพิ่มชุดเวลาการทำข้อมูลปัจจุบัน
+            const now = new Date();
+            const tsStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()+543} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} น.`;
+            
+            const renderBasePage = (eventsHtml, pageNum, totalPages, gridHtml) => {
                 return `
                 <div id="capture-layout-wrapper-${pageNum}" style="width: 1123px; height: 794px; background-color: #f8fafc; padding: 40px; font-family: 'Kanit', sans-serif; display: flex; flex-direction: column; box-sizing: border-box;">
                     <style>@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap'); * { font-family: 'Kanit', sans-serif !important; }</style>
@@ -820,10 +878,32 @@
                         </div>
                         <span style="font-size: 22px; font-weight: 600; color: #4b5563;">เดือน${thaiMonths[m]} ${y + 543} ${totalPages > 1 ? `(หน้า ${pageNum}/${totalPages})` : ''}</span>
                     </div>
-                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                        ${contentHtml}
+                    <div style="display: flex; gap: 40px; flex: 1; overflow: hidden;">
+                        <!-- ปฏิทินแสดงผลทุกหน้าเหมือนกัน -->
+                        <div style="width: 440px; flex-shrink: 0; background: white; padding: 20px; border-radius: 30px; border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; background: #94a3b8; padding: 12px 25px; border-radius: 15px; color: white; font-weight: 900; font-size: 20px;">
+                                <span>${engMonths[m]}</span><span>${y}</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 16px; font-weight: 800; color: #cbd5e1; margin-bottom: 10px;">
+                                <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(7, 1fr); flex: 1;">${gridHtml}</div>
+                        </div>
+                        
+                        <!-- ช่องแสดงรายการ (ข้อความไม่ถูกตัดล้นออก) -->
+                        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                            <h3 style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">รายการกิจกรรม</h3>
+                            <div style="flex: 1; overflow: visible;">
+                                ${eventsHtml || '<div style="color: #94a3b8;">ไม่มีรายการ</div>'}
+                            </div>
+                        </div>
                     </div>
-                    <div style="text-align: center; color: #cbd5e1; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; padding-top: 30px;">Verified Appointment System • MORANASATECT</div>
+                    
+                    <!-- ส่วน Footer แสดงข้อมูลเวลาอัปเดตมุมขวาล่าง -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; margin-top: 10px;">
+                        <div style="color: #cbd5e1; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Verified Appointment System • MORANASATECT</div>
+                        <div style="color: #94a3b8; font-size: 12px; font-weight: bold;">ข้อมูลเมื่อ: ${tsStr}</div>
+                    </div>
                 </div>`;
             };
 
@@ -834,12 +914,6 @@
                     ${e.description ? `<div style="font-size: 13px; color: #475569; line-height: 1.4; white-space: pre-wrap;">${escapeHTML(e.description)}</div>` : ''}
                 </div>
             `;
-
-            const totalItems = allActiveEvs.length;
-            let totalPages = 1;
-            if (totalItems > itemsPerPageP1) {
-                totalPages = 1 + Math.ceil((totalItems - itemsPerPageP1) / itemsPerPageNext);
-            }
 
             let grid = '';
             for (let i = 0; i < start; i++) grid += '<div></div>';
@@ -854,43 +928,47 @@
                 grid += `<div style="display: flex; justify-content: center; align-items: center; height: 48px;"><div style="${bg}"><span style="${txt} font-size: 18px;">${d}</span></div></div>`;
             }
 
-            const p1Events = allActiveEvs.slice(0, itemsPerPageP1);
-            const p1Content = `
-                <div style="display: flex; gap: 40px; flex: 1; overflow: hidden;">
-                    <div style="width: 440px; flex-shrink: 0; background: white; padding: 20px; border-radius: 30px; border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; background: #94a3b8; padding: 12px 25px; border-radius: 15px; color: white; font-weight: 900; font-size: 20px;">
-                            <span>${engMonths[m]}</span><span>${y}</span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 16px; font-weight: 800; color: #cbd5e1; margin-bottom: 10px;">
-                            <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); flex: 1;">${grid}</div>
-                    </div>
-                    <div style="flex: 1; overflow: hidden;">
-                        <h3 style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">รายการกิจกรรม</h3>
-                        ${p1Events.map(e => renderEventHtml(e)).join('') || '<div style="color: #94a3b8;">ไม่มีรายการ</div>'}
-                        ${totalItems > itemsPerPageP1 ? '<div style="text-align: center; color: #94a3b8; font-weight: bold; font-size: 12px; margin-top: 10px;">(มีต่อหน้าถัดไป...)</div>' : ''}
-                    </div>
-                </div>
-            `;
-            pages.push(renderBasePage(p1Content, 1, totalPages));
+            // --- ระบบคำนวณแบ่งหน้าอัตโนมัติ ตามความสูงของตัวอักษรจริงเพื่อป้องกันการตัดตก ---
+            const measureDiv = document.createElement('div');
+            measureDiv.style.width = '560px'; // ขนาดความกว้างของฝั่งขวา (ประมาณการ)
+            measureDiv.style.position = 'absolute';
+            measureDiv.style.visibility = 'hidden';
+            measureDiv.style.fontFamily = "'Kanit', sans-serif";
+            document.body.appendChild(measureDiv);
 
-            if (totalItems > itemsPerPageP1) {
-                for (let i = 1; i < totalPages; i++) {
-                    const startIdx = itemsPerPageP1 + (i - 1) * itemsPerPageNext;
-                    const nextEvents = allActiveEvs.slice(startIdx, startIdx + itemsPerPageNext);
-                    const pxContent = `
-                        <div style="flex: 1; padding: 0 10px; overflow: hidden;">
-                             <h3 style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">รายการกิจกรรม (ต่อ)</h3>
-                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;">
-                                ${nextEvents.map(e => renderEventHtml(e)).join('')}
-                             </div>
-                        </div>
-                    `;
-                    pages.push(renderBasePage(pxContent, i + 1, totalPages));
+            const MAX_HEIGHT = 450; // ความสูงปลอดภัยสูงสุดต่อ 1 หน้า (เหลือเผื่อหัว/ท้ายกระดาษ)
+            const pagesData = [];
+            let currentPageEventsHtml = '';
+            let currentHeight = 0;
+
+            for (const e of allActiveEvs) {
+                const evHtml = renderEventHtml(e);
+                measureDiv.innerHTML = evHtml;
+                const evHeight = measureDiv.offsetHeight + 15; // เผื่อขอบ margin-bottom ด้านล่าง
+
+                // ถ้านำบล็อกใหม่มาใส่แล้วความสูงเกินหน้ากระดาษ ให้ตัดแบ่งขึ้นหน้าใหม่
+                if (currentHeight + evHeight > MAX_HEIGHT && currentPageEventsHtml !== '') {
+                    pagesData.push(currentPageEventsHtml);
+                    currentPageEventsHtml = evHtml;
+                    currentHeight = evHeight;
+                } else {
+                    currentPageEventsHtml += evHtml;
+                    currentHeight += evHeight;
                 }
             }
-            return pages;
+            
+            // เก็บหน้าสุดท้ายเข้าอาร์เรย์
+            if (currentPageEventsHtml !== '') {
+                pagesData.push(currentPageEventsHtml);
+            }
+            if (pagesData.length === 0) {
+                pagesData.push('');
+            }
+            
+            document.body.removeChild(measureDiv);
+
+            const totalPages = pagesData.length;
+            return pagesData.map((eventsHtml, idx) => renderBasePage(eventsHtml, idx + 1, totalPages, grid));
         };
 
         window.cachedExportDataURLs = []; 
@@ -1006,6 +1084,84 @@
                 renderModalDetails();
             }
         }
+
+        // เพิ่ม Event Listeners สำหรับแบบฟอร์มการ Submit (จัดการและบันทึกข้อมูล)
+        // นำ DOMContentLoaded ออกเพื่อให้ Event ทำงานได้แน่นอนและไม่ทำให้เว็บเด้ง (Reload)
+        const authForm = document.getElementById('auth-form');
+        if (authForm) {
+            authForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const pwd = document.getElementById('auth-password').value;
+                // ตั้งค่ารหัสผ่านตรงนี้
+                if (pwd === '65030900') { 
+                    isAdmin = true;
+                    closeAuthModal();
+                    updateAdminUI();
+                } else {
+                    const err = document.getElementById('auth-error');
+                    if (err) err.classList.remove('hidden');
+                }
+            });
+        }
+
+        const eventForm = document.getElementById('add-event-form');
+        if (eventForm) {
+            eventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!isAdmin) return;
+                
+                const id = document.getElementById('ev-id').value;
+                    const title = document.getElementById('ev-title').value;
+                    const time = document.getElementById('ev-time').value;
+                    const endDate = document.getElementById('ev-enddate').value;
+                    const color = document.getElementById('ev-color').value;
+                    const desc = document.getElementById('ev-desc').value;
+                    
+                    const links = [];
+                    document.querySelectorAll('.link-form-row').forEach(row => {
+                        const label = row.querySelector('.link-label').value;
+                        const url = row.querySelector('.link-url').value;
+                        const order = row.querySelector('.link-order').value;
+                        const status = row.querySelector('.link-status').value;
+                        if (label || url) {
+                            links.push({ label, url, order, status });
+                        }
+                    });
+
+                    const eventData = { 
+                        title, time, endDate, color, description: desc, links, 
+                        date: selectedDate 
+                    };
+
+                    try {
+                        const subBtn = document.getElementById('submit-btn');
+                        const subTxt = document.getElementById('submit-text');
+                        const origTxt = subTxt.innerText;
+                        
+                        subTxt.innerText = 'กำลังบันทึก...';
+                        subBtn.disabled = true;
+                        
+                        if (id) {
+                            await updateDoc(doc(db, 'calendar_events', id), eventData);
+                        } else {
+                            await addDoc(collection(db, 'calendar_events'), eventData);
+                        }
+                        
+                        subTxt.innerText = origTxt;
+                        subBtn.disabled = false;
+                        resetForm();
+                        
+                        // บังคับเรนเดอร์ใหม่หลังบันทึก
+                        renderModalDetails();
+                        renderDashboard();
+                        renderAdminHistory();
+
+                    } catch (err) {
+                        console.error(err);
+                        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + err.message);
+                    }
+                });
+            }
 
         const init = async () => {
             try { await signInAnonymously(auth); } catch (e) {}
