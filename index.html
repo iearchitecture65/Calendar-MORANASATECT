@@ -66,34 +66,35 @@
 
     <!-- Announcement Popup for Users (Z-Index: 150) -->
     <div id="announcement-modal" class="fixed inset-0 z-[150] items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden fade-in border-4 border-indigo-500/20 relative">
-            <!-- Decorative background -->
-            <div class="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-10"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden fade-in border border-slate-100">
             
-            <div class="flex justify-between items-start p-6 relative z-10">
-                <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
-                    <i data-lucide="megaphone" class="w-6 h-6 animate-pulse"></i>
+            <!-- Clean Header -->
+            <div class="flex justify-between items-center px-5 py-4 border-b border-slate-100 bg-slate-50">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
+                        <i data-lucide="megaphone" class="w-4 h-4 animate-pulse"></i>
+                    </div>
+                    <h2 id="annc-display-title" class="text-base font-bold text-slate-800 leading-tight">ประกาศ</h2>
                 </div>
-                <button onclick="closeAnnouncement()" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors bg-white/50 backdrop-blur">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button onclick="closeAnnouncement()" class="p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
             
-            <div class="flex-1 overflow-y-auto px-6 pb-6 relative z-10 space-y-4">
-                <div>
-                    <h2 id="annc-display-title" class="text-2xl font-black text-slate-800 leading-tight">ประกาศ!</h2>
-                </div>
+            <!-- Body Content -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-4">
                 <p id="annc-display-msg" class="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap"></p>
                 
                 <!-- Linked Event Snippet -->
-                <div id="annc-display-event" class="hidden mt-4">
+                <div id="annc-display-event" class="hidden mt-2">
                     <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> กิจกรรมที่เกี่ยวข้อง</h4>
-                    <div id="annc-display-event-card" class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm cursor-pointer hover:bg-slate-100 transition-colors"></div>
+                    <div id="annc-display-event-card"></div>
                 </div>
             </div>
             
-            <div class="p-4 border-t border-slate-50 bg-slate-50/80 text-center">
-                <button onclick="closeAnnouncement()" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-sm">รับทราบ</button>
+            <!-- Footer Button -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50/50 text-center">
+                <button onclick="closeAnnouncement()" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm">รับทราบ</button>
             </div>
         </div>
     </div>
@@ -131,7 +132,8 @@
                         <p class="text-[10px] text-slate-500 mb-2">หากเลือกกิจกรรม ระบบจะแสดงการ์ดกิจกรรมนี้ในป๊อปอัปด้วย</p>
                         <select id="cfg-annc-event-id" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
                             <option value="">-- ไม่แนบกิจกรรม (แสดงแค่ข้อความ) --</option>
-                            <!-- ตัวเลือกกิจกรรมจะถูกเติมด้วย JS -->
+                            <option value="TODAY_EVENTS">-- 🌟 แสดงกิจกรรมของวันนี้ (อัปเดตอัตโนมัติ) --</option>
+                            <!-- ตัวเลือกกิจกรรมอื่นๆ จะถูกเติมด้วย JS -->
                         </select>
                     </div>
                     <div class="pt-4 flex gap-2">
@@ -149,27 +151,15 @@
             <i data-lucide="construction" class="w-10 h-10"></i>
         </div>
         <h1 class="text-2xl font-bold text-slate-800 mb-2">ปิดปรับปรุงระบบชั่วคราว</h1>
-        <p class="text-slate-500 max-w-xs">ขออภัยในความไม่สะดวก ขณะนี้เว็บไซต์กำลังอยู่ระหว่างการปรับปรุงข้อมูล กรุณาลองใหม่อีกครั้งในภายหลัง</p>
-        
-        <!-- Footer Credit for Maintenance Screen -->
-        <div class="mt-auto pb-10 opacity-40">
-            <div class="flex items-center justify-center gap-2">
-                <i data-lucide="globe" class="w-4 h-4"></i>
-                <span class="text-xs font-bold uppercase tracking-tighter">Official Appointment Website</span>
-            </div>
-        </div>
-        
-        <button onclick="toggleAdminModal()" class="mt-4 text-slate-300 hover:text-slate-500 text-sm underline transition-colors">สำหรับแอดมิน</button>
+        <p class="text-slate-500 max-w-xs mb-8">ขออภัยในความไม่สะดวก ขณะนี้เว็บไซต์กำลังอยู่ระหว่างการปรับปรุงข้อมูล กรุณาลองใหม่อีกครั้งในภายหลัง</p>
+        <button onclick="toggleAdminModal()" class="text-slate-300 hover:text-slate-500 text-sm underline transition-colors">สำหรับแอดมิน</button>
     </div>
 
     <!-- Main Content Container -->
     <div id="app-content" class="w-full max-w-7xl p-3 sm:p-6 lg:p-8 space-y-6 relative hidden">
         
         <!-- Admin Toggle Button & Status Panel -->
-        <div class="absolute top-4 right-4 sm:top-6 sm:right-6 flex flex-col items-end gap-2 z-10">
-            <button onclick="toggleAdminModal()" id="admin-toggle-btn" class="p-2 rounded-full transition-all text-slate-300 hover:text-slate-500 hover:bg-white" title="เข้าสู่โหมดแอดมิน">
-                <i data-lucide="lock" id="admin-lock-icon" class="w-5 h-5"></i>
-            </button>
+        <div class="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2 z-10">
             <div id="site-control-panel" class="hidden fade-in bg-white/80 backdrop-blur border border-slate-200 rounded-xl p-1.5 shadow-sm flex items-center">
                 <!-- ปุ่มตั้งค่าประกาศ -->
                 <button id="admin-annc-toggle" onclick="openAdminAnnouncement()" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-lg text-[10px] font-bold transition-all shadow-sm flex items-center gap-1 mr-2 ml-0.5">
@@ -181,6 +171,9 @@
                     กำลังโหลด...
                 </button>
             </div>
+            <button onclick="toggleAdminModal()" id="admin-toggle-btn" class="p-2 rounded-full transition-all text-slate-300 hover:text-slate-500 hover:bg-white" title="เข้าสู่โหมดแอดมิน">
+                <i data-lucide="lock" id="admin-lock-icon" class="w-5 h-5"></i>
+            </button>
         </div>
 
         <!-- Header -->
@@ -565,27 +558,51 @@
             if (!isDataLoaded.events || !isDataLoaded.config) return; // รอให้ข้อมูลมาครบทั้ง 2 ก่อน
             if (hasShownPopup) return; // หากโหลดไปแล้วจะไม่โหลดซ้ำ
             if (!popupConfig.is_active || String(popupConfig.is_active) === 'false') return;
+            if (!siteActive && !isAdmin) return; // ป้องกันการแสดงป๊อปอัปประกาศ ถ้าเว็บปิดปรับปรุง (ยกเว้นแอดมิน)
             
             // นำข้อมูลไปใส่ใน Modal แจ้งเตือน
             document.getElementById('annc-display-title').innerText = popupConfig.title || 'ประกาศจากระบบ';
             document.getElementById('annc-display-msg').innerText = popupConfig.message || '';
             
             const eventSnippet = document.getElementById('annc-display-event');
-            const eventCard = document.getElementById('annc-display-event-card');
+            const eventCardContainer = document.getElementById('annc-display-event-card');
             
-            if (popupConfig.event_id) {
+            if (popupConfig.event_id === 'TODAY_EVENTS') {
+                const todayStr = getTodayString();
+                const todayEvs = events.filter(e => isDateInRange(todayStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
+                
+                eventSnippet.classList.remove('hidden');
+                if (todayEvs.length > 0) {
+                    eventCardContainer.className = ""; // เคลียร์คลาสเก่าที่อาจค้าง
+                    eventCardContainer.innerHTML = todayEvs.map(linkedEv => `
+                        <div onclick="closeAnnouncement(); openEventView('${linkedEv.id}');" class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm cursor-pointer hover:border-indigo-300 transition-all mb-2 last:mb-0">
+                            <div class="flex flex-col">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 shadow-sm whitespace-nowrap">${linkedEv.time} น.</span>
+                                </div>
+                                <h5 class="font-bold text-sm text-slate-800 leading-tight mt-1 line-clamp-2">${escapeHTML(linkedEv.title)}</h5>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    eventCardContainer.className = "";
+                    eventCardContainer.innerHTML = `<div class="text-[11px] text-slate-500 text-center py-3 bg-slate-50 rounded-xl border border-slate-200 border-dashed">ไม่มีกิจกรรมในวันนี้</div>`;
+                }
+
+            } else if (popupConfig.event_id) {
                 const linkedEv = events.find(e => e.id === popupConfig.event_id);
                 if (linkedEv) {
                     eventSnippet.classList.remove('hidden');
-                    // ใส่ onClick ให้คลิกเพื่อดูรายละเอียดเต็ฒได้
-                    eventCard.setAttribute('onclick', `closeAnnouncement(); openEventView('${linkedEv.id}');`);
-                    eventCard.innerHTML = `
-                        <div class="flex flex-col">
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-white shadow-sm whitespace-nowrap">${linkedEv.time} น.</span>
-                                <span class="text-[10px] font-semibold text-slate-500">${formatThaiDate(linkedEv.date)}</span>
+                    eventCardContainer.className = "";
+                    eventCardContainer.innerHTML = `
+                        <div onclick="closeAnnouncement(); openEventView('${linkedEv.id}');" class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm cursor-pointer hover:border-indigo-300 transition-all">
+                            <div class="flex flex-col">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 shadow-sm whitespace-nowrap">${linkedEv.time} น.</span>
+                                    <span class="text-[10px] font-semibold text-slate-500">${formatThaiDate(linkedEv.date)}</span>
+                                </div>
+                                <h5 class="font-bold text-sm text-slate-800 leading-tight mt-1 line-clamp-2">${escapeHTML(linkedEv.title)}</h5>
                             </div>
-                            <h5 class="font-bold text-sm text-slate-800 leading-tight mt-1 line-clamp-2">${escapeHTML(linkedEv.title)}</h5>
                         </div>
                     `;
                 } else {
@@ -618,7 +635,10 @@
             const evSelect = document.getElementById('cfg-annc-event-id');
             // เรียงกิจกรรมล่าสุดไปเก่า
             const sortedEvents = [...events].sort((a, b) => b.date.localeCompare(a.date));
-            evSelect.innerHTML = '<option value="">-- ไม่แนบกิจกรรม (แสดงแค่ข้อความ) --</option>';
+            evSelect.innerHTML = `
+                <option value="">-- ไม่แนบกิจกรรม (แสดงแค่ข้อความ) --</option>
+                <option value="TODAY_EVENTS" ${popupConfig.event_id === 'TODAY_EVENTS' ? 'selected' : ''}>-- 🌟 แสดงกิจกรรมของวันนี้ (อัปเดตอัตโนมัติ) --</option>
+            `;
             sortedEvents.forEach(e => {
                 const opt = document.createElement('option');
                 opt.value = e.id;
@@ -871,6 +891,7 @@
             if (!siteActive && !isAdmin) {
                 if(screen) screen.classList.remove('hidden'); 
                 if(content) content.classList.add('hidden');
+                closeAnnouncement(); // ซ่อนประกาศอัตโนมัติหากเว็บปิดปรับปรุง
             } else {
                 if(screen) screen.classList.add('hidden'); 
                 if(content) content.classList.remove('hidden');
@@ -963,7 +984,7 @@
             row.className = "link-form-row grid grid-cols-12 gap-2 bg-white p-2 rounded-lg border border-slate-100 shadow-sm mb-2 fade-in items-center";
             row.draggable = true;
             row.innerHTML = `
-                <div class="col-span-1 flex items-center justify-center text-slate-300 hover:text-slate-500 drag-handle" title="ลากเพื่อเรียงลำดับ">
+                <div class="col-span-1 flex items-center justify-center text-slate-300 hover:text-slate-50 drag-handle" title="ลากเพื่อเรียงลำดับ">
                     <i data-lucide="grip-vertical" class="w-4 h-4"></i>
                 </div>
                 <div class="col-span-3"><input type="text" placeholder="ชื่อปุ่ม" value="${escapeHTML(data.label||'')}" class="link-label w-full px-2 py-1 text-[10px] border border-slate-100 rounded bg-slate-50 focus:bg-white outline-none"></div>
