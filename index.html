@@ -2,21 +2,30 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <!-- ปรับปรุง viewport เพื่อล็อกการซูมและป้องกัน auto-zoom บนมือถือ -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ระบบตารางนัดหมาย</title>
     
+    <!-- Favicon (Calendar) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2' ry='2'/><line x1='16' x2='16' y1='2' y2='6'/><line x1='8' x2='8' y1='2' y2='6'/><line x1='3' x2='21' y1='10' y2='10'/></svg>">
     
+    <!-- Google Fonts: Kanit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
+    <!-- html-to-image, jsPDF & JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- 🌟 เพิ่ม Google Identity Services สำหรับการ Login และขอ Token -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script>
@@ -30,7 +39,12 @@
     </script>
 
     <style>
-        html, body { font-family: 'Kanit', sans-serif; touch-action: manipulation; }
+        /* ล็อกการซูมจากการกดซ้ำ (Double tap zoom) */
+        html, body { 
+            font-family: 'Kanit', sans-serif; 
+            touch-action: manipulation;
+        }
+        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -40,21 +54,34 @@
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         
         .preview-title-capsule { white-space: nowrap !important; display: inline-flex !important; }
+        
+        /* สไตล์สำหรับการคลิกการ์ด */
         .event-card-clickable { cursor: pointer; transition: all 0.2s ease; }
         .event-card-clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        /* สไตล์สำหรับการลากและวาง (Drag & Drop) */
         .link-form-row { transition: background-color 0.2s, box-shadow 0.2s; }
         .link-form-row.dragging { opacity: 0.5; background-color: #f1f5f9; border: 1px dashed #94a3b8; }
         .drag-handle { cursor: grab; }
         .drag-handle:active { cursor: grabbing; }
 
+        /* ระบบขอบสีแบบ Gradient สำหรับปฏิทิน */
         .calendar-day-btn {
             border: 2px solid transparent;
             background-origin: border-box;
             background-clip: padding-box, border-box;
         }
 
+        /* Toggle Switch Custom Style */
+        .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
+        .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.2s ease; }
+        .toggle-label { background-color: #e2e8f0; transition: all 0.2s ease; }
+
         @media screen and (max-width: 768px) {
-            input, select, textarea, button { font-size: 16px !important; }
+            input, select, textarea, button {
+                font-size: 16px !important;
+            }
         }
     </style>
 </head>
@@ -152,16 +179,17 @@
 
         </div>
     </div>
+    <!-- END ADMIN SIDEBAR -->
 
     <!-- Confirmation Sync Modal -->
     <div id="sync-confirm-modal" class="fixed inset-0 z-[160] items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 fade-in text-center border border-slate-100">
             <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i data-lucide="calendar-sync" class="w-7 h-7"></i>
+                <i data-lucide="calendar-sync" class="w-7 h-7" id="sync-modal-icon"></i>
             </div>
-            <h3 class="text-lg font-bold text-slate-800 mb-2">ซิงค์กับ Google Calendar</h3>
-            <p class="text-slate-500 text-xs mb-6 leading-relaxed">ระบบจะทำการเชื่อมต่อกับบัญชี Google ของคุณเพื่อบันทึกนัดหมาย หากมีการอัปเดตในเว็บ ปฏิทินของคุณจะอัปเดตตามอัตโนมัติ (ในขณะที่เปิดหน้านี้)</p>
-            <div class="flex gap-2">
+            <h3 id="sync-modal-title" class="text-lg font-bold text-slate-800 mb-2">ซิงค์กับ Google Calendar</h3>
+            <p id="sync-modal-desc" class="text-slate-500 text-xs mb-6 leading-relaxed">ระบบจะทำการเชื่อมต่อกับบัญชี Google ของคุณเพื่อบันทึกนัดหมาย หากมีการอัปเดตในเว็บ ปฏิทินของคุณจะอัปเดตตามอัตโนมัติ (ในขณะที่เปิดหน้านี้)</p>
+            <div id="sync-modal-actions" class="flex gap-2">
                 <button onclick="closeSyncModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">ยกเลิก</button>
                 <button id="btn-confirm-gcal-sync" onclick="confirmSyncAll()" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm flex justify-center items-center gap-1.5"><i data-lucide="log-in" class="w-4 h-4 hidden" id="sync-btn-icon"></i> ดำเนินการต่อ</button>
             </div>
@@ -779,6 +807,18 @@
                 performSync(true); 
             }
         }
+        
+        window.isGoogleSyncActive = () => {
+            return accessToken !== null;
+        };
+
+        window.stopGoogleSync = () => {
+            if (accessToken && window.google) {
+                try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch(e){}
+            }
+            accessToken = null;
+            localStorage.removeItem('gcal_sync_time');
+        };
         // --- End of Google Calendar Sync Module ---
 
         const firebaseConfig = {
@@ -866,6 +906,28 @@
         window.openUpcomingModal = openUpcomingModal;
         window.closeUpcomingModal = closeUpcomingModal;
 
+        window.formatThaiDateTime = (dateStr) => {
+            const d = new Date(dateStr);
+            const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            return `${d.getDate()} ${thaiMonths[d.getMonth()]} ${d.getFullYear() + 543} เวลา ${time} น.`;
+        };
+
+        window.updateMainSyncButtonUI = (isSyncing) => {
+            const btnContainer = document.getElementById('main-sync-btn-container');
+            if(!btnContainer) return;
+            const btn = btnContainer.querySelector('button');
+            if(!btn) return;
+            
+            if(isSyncing) {
+                btn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4 text-emerald-500 animate-spin"></i> <span class="text-emerald-700">กำลังซิงก์ข้อมูลอัตโนมัติ</span>`;
+                btn.className = "group flex items-center gap-2.5 px-5 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-xs sm:text-sm font-bold shadow-sm transition-all active:scale-95 mb-4";
+            } else {
+                btn.innerHTML = `<i data-lucide="calendar-sync" class="w-4 h-4 text-indigo-500 group-hover:rotate-12 transition-transform"></i> ซิงค์ข้อมูลลง Google Calendar`;
+                btn.className = "group flex items-center gap-2.5 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-2xl text-xs sm:text-sm font-bold shadow-sm transition-all active:scale-95 mb-4";
+            }
+            if(window.lucide) window.lucide.createIcons();
+        };
+
         // 🌟 Admin Sidebar Logic 🌟
         window.openAdminSidebar = () => {
             document.getElementById('admin-sidebar-overlay').classList.remove('hidden');
@@ -931,25 +993,71 @@
         
         // 🌟 Sync Logic Integration 🌟
         window.requestSyncAll = () => { 
+            const titleEl = document.getElementById('sync-modal-title');
+            const descEl = document.getElementById('sync-modal-desc');
+            const actionsEl = document.getElementById('sync-modal-actions');
+            const iconEl = document.getElementById('sync-modal-icon');
+            
+            if (window.isGoogleSyncActive()) {
+                const syncTime = localStorage.getItem('gcal_sync_time');
+                const timeStr = syncTime ? window.formatThaiDateTime(syncTime) : 'ไม่ทราบเวลา';
+                
+                titleEl.innerText = "สถานะ: กำลังซิงก์ข้อมูล";
+                descEl.innerHTML = `<span class="text-emerald-600 font-bold text-sm">● เชื่อมต่อกับปฏิทินสำเร็จ</span><br><br>ระบบกำลังทำการซิงก์ข้อมูลนัดหมายกับ Google Calendar แบบเรียลไทม์<br><br><span class="text-slate-400">ซิงค์ครั้งแรกเมื่อ: ${timeStr}</span><br><br>หากคุณต้องการหยุดการซิงก์ข้อมูลอัตโนมัติ ให้กดปุ่มยกเลิกด้านล่าง`;
+                
+                iconEl.setAttribute('data-lucide', 'refresh-cw');
+                iconEl.classList.add('text-emerald-500', 'animate-spin');
+                iconEl.classList.remove('text-indigo-600');
+                
+                actionsEl.innerHTML = `
+                    <button onclick="closeSyncModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">ปิดหน้าต่าง</button>
+                    <button onclick="stopSyncAll()" class="flex-1 py-2.5 bg-rose-500 text-white rounded-xl text-xs font-bold hover:bg-rose-600 transition-colors shadow-sm">ยกเลิกการซิงก์</button>
+                `;
+            } else {
+                titleEl.innerText = "ซิงค์กับ Google Calendar";
+                descEl.innerHTML = "ระบบจะทำการเชื่อมต่อกับบัญชี Google ของคุณเพื่อบันทึกนัดหมาย หากมีการอัปเดตในเว็บ ปฏิทินของคุณจะอัปเดตตามอัตโนมัติ (ในขณะที่เปิดหน้านี้)";
+                
+                iconEl.setAttribute('data-lucide', 'calendar-sync');
+                iconEl.classList.remove('text-emerald-500', 'animate-spin');
+                iconEl.classList.add('text-indigo-600');
+
+                actionsEl.innerHTML = `
+                    <button onclick="closeSyncModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">ยกเลิก</button>
+                    <button id="btn-confirm-gcal-sync" onclick="confirmSyncAll()" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm flex justify-center items-center gap-1.5"><i data-lucide="log-in" class="w-4 h-4 hidden" id="sync-btn-icon"></i> ดำเนินการต่อ</button>
+                `;
+            }
+            if(window.lucide) window.lucide.createIcons();
+
             document.getElementById('sync-confirm-modal').classList.remove('hidden'); 
             document.getElementById('sync-confirm-modal').classList.add('flex');
             updateScrollLock(); 
         };
+
         window.closeSyncModal = () => { 
             document.getElementById('sync-confirm-modal').classList.add('hidden'); 
             document.getElementById('sync-confirm-modal').classList.remove('flex');
             updateScrollLock(); 
         };
+        
         window.confirmSyncAll = () => { 
             const btn = document.getElementById('btn-confirm-gcal-sync');
             const icon = document.getElementById('sync-btn-icon');
-            btn.disabled = true;
-            icon.classList.remove('hidden');
-            icon.classList.add('animate-spin');
-            icon.setAttribute('data-lucide', 'loader-2');
-            if(window.lucide) window.lucide.createIcons();
+            if(btn && icon) {
+                btn.disabled = true;
+                icon.classList.remove('hidden');
+                icon.classList.add('animate-spin');
+                icon.setAttribute('data-lucide', 'loader-2');
+                if(window.lucide) window.lucide.createIcons();
+            }
 
             triggerUserSync(events); 
+        };
+
+        window.stopSyncAll = () => {
+            window.stopGoogleSync();
+            closeSyncModal();
+            window.updateMainSyncButtonUI(false);
+            showToast("ยกเลิกการซิงก์ข้อมูลเรียบร้อยแล้ว");
         };
 
         window.handleSyncStatus = (result) => {
@@ -957,17 +1065,22 @@
             const icon = document.getElementById('sync-btn-icon');
             
             if (result.status === 'success') {
+                if (!localStorage.getItem('gcal_sync_time')) {
+                    localStorage.setItem('gcal_sync_time', new Date().toISOString());
+                }
+                window.updateMainSyncButtonUI(true);
+
                 closeSyncModal();
                 showToast(result.message);
-                btn.disabled = false;
-                icon.classList.add('hidden');
-                icon.classList.remove('animate-spin');
             } else if (result.status === 'error') {
+                if (btn && icon) {
+                    btn.disabled = false;
+                    icon.classList.add('hidden');
+                    icon.classList.remove('animate-spin');
+                }
                 closeSyncModal();
                 showToast(result.message, true);
-                btn.disabled = false;
-                icon.classList.add('hidden');
-                icon.classList.remove('animate-spin');
+                window.updateMainSyncButtonUI(false);
             }
         };
 
@@ -1125,12 +1238,10 @@
         }
 
         function openAdminAnnouncement() {
-            // Function no longer opens a modal, it opens the sidebar where the form is.
             openAdminSidebar();
         }
 
         function closeAdminAnnouncement() {
-            // Logic moved to closeAdminSidebar
             closeAdminSidebar();
         }
 
