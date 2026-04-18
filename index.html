@@ -765,6 +765,30 @@
             }
         }
 
+        window.updateAdminAnncDropdown = () => {
+            const evSelect = document.getElementById('cfg-annc-event-id');
+            if (!evSelect) return;
+            const sortedEvents = [...events].sort((a, b) => b.date.localeCompare(a.date));
+            evSelect.innerHTML = `
+                <option value="">-- ไม่แนบกิจกรรม --</option>
+                <option value="TODAY_EVENTS">-- 🌟 แสดงกิจกรรมของวันนี้ --</option>
+            `;
+            sortedEvents.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.innerText = `[${e.date}] ${e.title}`;
+                if (popupConfig && popupConfig.event_id === e.id) {
+                    opt.selected = true;
+                }
+                evSelect.appendChild(opt);
+            });
+            if (popupConfig && popupConfig.event_id) {
+                evSelect.value = popupConfig.event_id;
+            } else {
+                evSelect.value = '';
+            }
+        };
+
         function initGoogleSync(onStatusChange) {
             syncCallback = onStatusChange;
             const initClient = () => {
@@ -1075,36 +1099,6 @@
             triggerUserSync(events); 
         };
 
-        window.stopSyncAll = async () => {
-            const btn = document.getElementById('btn-stop-sync');
-            const icon = document.getElementById('stop-sync-icon');
-            if(btn && icon) {
-                btn.disabled = true;
-                icon.classList.remove('hidden');
-                icon.classList.add('animate-spin');
-                icon.setAttribute('data-lucide', 'loader-2');
-                btn.querySelector('span').innerText = 'กำลังลบข้อมูล...';
-                if(window.lucide) window.lucide.createIcons();
-            }
-
-            if (accessToken) {
-                const syncMap = getSyncMap();
-                for (const fbId in syncMap) {
-                    try { await fetchGoogleAPI('DELETE', `/${syncMap[fbId]}`); } catch(e) {}
-                }
-                if (window.google) {
-                    try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch(e){}
-                }
-            }
-            accessToken = null;
-            localStorage.removeItem('gcal_sync_time');
-            localStorage.removeItem('gcal_sync_map');
-
-            closeSyncModal();
-            window.updateMainSyncButtonUI(false);
-            showToast("ยกเลิกการซิงก์และลบข้อมูลออกจากปฏิทินเรียบร้อยแล้ว");
-        };
-
         window.handleSyncStatus = (result) => {
             const btn = document.getElementById('btn-confirm-gcal-sync');
             const icon = document.getElementById('sync-btn-icon');
@@ -1213,15 +1207,28 @@
 
         function checkAndShowAnnouncement() {
             if (!isDataLoaded.events || !isDataLoaded.config) return; 
-            if (hasShownPopup) return; 
-            if (!popupConfig.is_active || String(popupConfig.is_active) === 'false') return;
-            if (!siteActive && !isAdmin) return; 
             
+            // Check if it should NOT show
+            let shouldShow = true;
+            if (!popupConfig.is_active || String(popupConfig.is_active) === 'false') shouldShow = false;
+            if (!siteActive && !isAdmin) shouldShow = false;
+
+            let todayEvs = [];
             if (popupConfig.event_id === 'TODAY_EVENTS') {
                 const todayStr = getTodayString();
-                const todayEvs = events.filter(e => isDateInRange(todayStr, e.date, e.endDate));
-                if (todayEvs.length === 0) return; 
+                todayEvs = events.filter(e => isDateInRange(todayStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
+                if (todayEvs.length === 0) {
+                    shouldShow = false; // "พิเศษแค่กิจกรรมวันนี้ ให้ยึดจากการเลือกแนบกิจกรรม"
+                }
             }
+
+            if (!shouldShow) {
+                // Force close if it's currently open
+                closeAnnouncement();
+                return;
+            }
+
+            if (hasShownPopup) return; 
             
             document.getElementById('annc-display-title').innerText = popupConfig.title || 'ประกาศจากระบบ';
             document.getElementById('annc-display-msg').innerText = popupConfig.message || '';
@@ -1230,9 +1237,6 @@
             const eventCardContainer = document.getElementById('annc-display-event-card');
             
             if (popupConfig.event_id === 'TODAY_EVENTS') {
-                const todayStr = getTodayString();
-                const todayEvs = events.filter(e => isDateInRange(todayStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
-                
                 eventSnippet.classList.remove('hidden');
                 eventCardContainer.className = ""; 
                 eventCardContainer.innerHTML = todayEvs.map(linkedEv => `
@@ -1922,19 +1926,7 @@
                 document.getElementById('cfg-annc-title').value = popupConfig.title || '';
                 document.getElementById('cfg-annc-msg').value = popupConfig.message || '';
                 
-                const evSelect = document.getElementById('cfg-annc-event-id');
-                const sortedEvents = [...events].sort((a, b) => b.date.localeCompare(a.date));
-                evSelect.innerHTML = `
-                    <option value="">-- ไม่แนบกิจกรรม --</option>
-                    <option value="TODAY_EVENTS">-- 🌟 แสดงกิจกรรมของวันนี้ --</option>
-                `;
-                sortedEvents.forEach(e => {
-                    const opt = document.createElement('option');
-                    opt.value = e.id;
-                    opt.innerText = `[${e.date}] ${e.title}`;
-                    if (popupConfig.event_id === e.id) opt.selected = true;
-                    evSelect.appendChild(opt);
-                });
+                window.updateAdminAnncDropdown();
                 
             } else {
                 const btn = document.getElementById('admin-toggle-btn');
@@ -2553,6 +2545,30 @@
             });
         }
 
+        window.updateAdminAnncDropdown = () => {
+            const evSelect = document.getElementById('cfg-annc-event-id');
+            if (!evSelect) return;
+            const sortedEvents = [...events].sort((a, b) => b.date.localeCompare(a.date));
+            evSelect.innerHTML = `
+                <option value="">-- ไม่แนบกิจกรรม --</option>
+                <option value="TODAY_EVENTS">-- 🌟 แสดงกิจกรรมของวันนี้ --</option>
+            `;
+            sortedEvents.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id;
+                opt.innerText = `[${e.date}] ${e.title}`;
+                if (popupConfig && popupConfig.event_id === e.id) {
+                    opt.selected = true;
+                }
+                evSelect.appendChild(opt);
+            });
+            if (popupConfig && popupConfig.event_id) {
+                evSelect.value = popupConfig.event_id;
+            } else {
+                evSelect.value = '';
+            }
+        };
+
         const init = async () => {
             // Initialize Sync Module
             initGoogleSync(window.handleSyncStatus);
@@ -2564,7 +2580,10 @@
                     isDataLoaded.events = true; 
                     renderCalendar(); 
                     renderDashboard(); 
-                    if (isAdmin) renderAdminHistory(); 
+                    if (isAdmin) {
+                        renderAdminHistory();
+                        window.updateAdminAnncDropdown();
+                    }
                     document.getElementById('loading').classList.add('hidden'); 
                     checkSiteVisibility(); 
                     if(!hasShownPopup) checkAndShowAnnouncement(); 
@@ -2583,17 +2602,20 @@
                     window.applyFeatureToggles();
                 });
                 onSnapshot(doc(db, 'settings', 'popup_config'), (snapshot) => { 
-                    if(snapshot.exists()) popupConfig = snapshot.data(); 
+                    if(snapshot.exists()) {
+                        popupConfig = snapshot.data(); 
+                    } else {
+                        popupConfig = { is_active: false, event_id: '', title: '', message: '' };
+                    }
                     isDataLoaded.config = true; 
                     checkAndShowAnnouncement(); 
 
                     // อัปเดตฟอร์มใน Sidebar ถ้าเปิดอยู่
-                    const evSelect = document.getElementById('cfg-annc-event-id');
-                    if (evSelect && isAdmin) {
+                    if (isAdmin) {
                         document.getElementById('cfg-annc-active').value = popupConfig.is_active ? "true" : "false";
                         document.getElementById('cfg-annc-title').value = popupConfig.title || '';
                         document.getElementById('cfg-annc-msg').value = popupConfig.message || '';
-                        evSelect.value = popupConfig.event_id || '';
+                        window.updateAdminAnncDropdown();
                     }
                 });
             }});
