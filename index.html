@@ -223,7 +223,7 @@
         </div>
     </div>
 
-    <!-- Upcoming Events Modal -->
+    <!-- Upcoming Events Modal (Z-Index: 100) -->
     <div id="upcoming-modal" class="fixed inset-0 z-[100] items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm hidden">
         <div class="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden fade-in">
             <div class="flex justify-between items-start p-5 sm:px-6 pt-6 pb-4 border-b border-slate-100">
@@ -812,12 +812,34 @@
             return accessToken !== null;
         };
 
-        window.stopGoogleSync = () => {
-            if (accessToken && window.google) {
-                try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch(e){}
+        window.stopSyncAll = async () => {
+            const btn = document.getElementById('btn-stop-sync');
+            const icon = document.getElementById('stop-sync-icon');
+            if(btn && icon) {
+                btn.disabled = true;
+                icon.classList.remove('hidden');
+                icon.classList.add('animate-spin');
+                icon.setAttribute('data-lucide', 'loader-2');
+                btn.querySelector('span').innerText = 'กำลังลบข้อมูล...';
+                if(window.lucide) window.lucide.createIcons();
+            }
+
+            if (accessToken) {
+                const syncMap = getSyncMap();
+                for (const fbId in syncMap) {
+                    try { await fetchGoogleAPI('DELETE', `/${syncMap[fbId]}`); } catch(e) {}
+                }
+                if (window.google) {
+                    try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch(e){}
+                }
             }
             accessToken = null;
             localStorage.removeItem('gcal_sync_time');
+            localStorage.removeItem('gcal_sync_map');
+
+            closeSyncModal();
+            window.updateMainSyncButtonUI(false);
+            showToast("ยกเลิกการซิงก์และลบข้อมูลออกจากปฏิทินเรียบร้อยแล้ว");
         };
         // --- End of Google Calendar Sync Module ---
 
@@ -1011,7 +1033,7 @@
                 
                 actionsEl.innerHTML = `
                     <button onclick="closeSyncModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">ปิดหน้าต่าง</button>
-                    <button onclick="stopSyncAll()" class="flex-1 py-2.5 bg-rose-500 text-white rounded-xl text-xs font-bold hover:bg-rose-600 transition-colors shadow-sm">ยกเลิกการซิงก์</button>
+                    <button id="btn-stop-sync" onclick="stopSyncAll()" class="flex-1 py-2.5 bg-rose-500 text-white rounded-xl text-xs font-bold hover:bg-rose-600 transition-colors shadow-sm flex justify-center items-center gap-1.5"><i data-lucide="trash-2" class="w-4 h-4 hidden" id="stop-sync-icon"></i> <span>ยกเลิกการซิงก์</span></button>
                 `;
             } else {
                 titleEl.innerText = "ซิงค์กับ Google Calendar";
@@ -1051,13 +1073,6 @@
             }
 
             triggerUserSync(events); 
-        };
-
-        window.stopSyncAll = () => {
-            window.stopGoogleSync();
-            closeSyncModal();
-            window.updateMainSyncButtonUI(false);
-            showToast("ยกเลิกการซิงก์ข้อมูลเรียบร้อยแล้ว");
         };
 
         window.handleSyncStatus = (result) => {
@@ -1849,8 +1864,7 @@
         }
 
         function updateAdminUI() {
-            const btn = document.getElementById('admin-toggle-btn');
-            const icon = document.getElementById('admin-lock-icon');
+            const l = document.getElementById('admin-lock-icon');
             const hist = document.getElementById('admin-history-section');
             const exp = document.getElementById('admin-export-buttons');
             const warn = document.getElementById('site-offline-warning');
@@ -1864,6 +1878,7 @@
             
             if (isAdmin) {
                 // 🌟 เปลี่ยนสีปุ่มเมื่อล็อกอินแอดมินเป็นสีน้ำเงิน 🌟
+                const btn = document.getElementById('admin-toggle-btn');
                 if(btn) btn.className = "p-2.5 rounded-full bg-blue-600 text-white shadow-md z-10 transition-all hover:bg-blue-700";
                 if(icon) icon.setAttribute('data-lucide', 'unlock');
                 
@@ -1892,6 +1907,7 @@
                 });
                 
             } else {
+                const btn = document.getElementById('admin-toggle-btn');
                 if(btn) btn.className = "p-2.5 rounded-full transition-all text-slate-400 bg-white border border-slate-200 shadow-sm hover:text-indigo-600 hover:border-indigo-200";
                 if(icon) icon.setAttribute('data-lucide', 'lock');
                 if(hist) hist.classList.add('hidden'); 
