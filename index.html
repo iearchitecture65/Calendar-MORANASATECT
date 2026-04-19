@@ -309,7 +309,7 @@
                                     </select>
 
                                     <div id="task-schedule-specific-ui" class="hidden flex gap-2">
-                                        <input type="date" id="task-schedule-date" class="flex-[1.5] px-3 py-1.5 bg-white border border-amber-200 rounded-lg text-xs focus:outline-none shadow-sm">
+                                        <input type="date" id="task-schedule-date" onchange="window.updateTaskEventPreview()" class="flex-[1.5] px-3 py-1.5 bg-white border border-amber-200 rounded-lg text-xs focus:outline-none shadow-sm">
                                         <input type="time" id="task-schedule-time" class="flex-1 px-3 py-1.5 bg-white border border-amber-200 rounded-lg text-xs focus:outline-none shadow-sm">
                                     </div>
 
@@ -1092,6 +1092,7 @@
         const getHexColor = (c) => legacyColors[c] || c || '#818cf8';
         let recentColors = ['#818cf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa']; 
 
+        // 🌟 Remove dependency on exportColors predefined bg, use direct hex map
         const exportColors = {
             blue: { bg: '#818cf8' }, green: { bg: '#34d399' }, orange: { bg: '#fbbf24' }, red: { bg: '#f87171' }, purple: { bg: '#a78bfa' },
             '#818cf8': { bg: '#818cf8' }, '#34d399': { bg: '#34d399' }, '#fbbf24': { bg: '#fbbf24' }, '#f87171': { bg: '#f87171' }, '#a78bfa': { bg: '#a78bfa' }
@@ -1431,7 +1432,7 @@
                 else if(task.scheduleMode === 'before_event') schedText = `ก่อนกิจกรรม ${task.scheduleHours} ชม. ${task.scheduleMins} นาที`;
                 
                 let evName = "ไม่แนบกิจกรรม";
-                if(task.eventId === 'TODAY_EVENTS') evName = "กิจกรรมของวันนี้ (อัตโนมัติ)";
+                if(task.eventId === 'TODAY_EVENTS') evName = "กิจกรรมของวันที่ตั้งเวลาไว้";
                 else if(task.eventId) {
                     const found = events.find(e => e.id === task.eventId);
                     if(found) evName = found.title;
@@ -1711,14 +1712,22 @@
         window.updateTaskEventPreview = () => {
             const evId = document.getElementById('task-event-select').value;
             const previewContainer = document.getElementById('task-event-preview');
+            const mode = document.getElementById('task-schedule-mode').value;
+            const schedDate = document.getElementById('task-schedule-date').value;
             let previewHtml = '';
             
             if (evId === 'TODAY_EVENTS') {
-                const todayStr = getTodayString();
-                const todayEvs = events.filter(e => isDateInRange(todayStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
+                let targetDateStr = getTodayString();
+                // 🌟 หากเลือกส่งแบบเจาะจงวันที่ จะดึงกิจกรรมของวันที่ตั้งเวลามาพรีวิว 🌟
+                if (mode === 'specific_time' && schedDate) {
+                    targetDateStr = schedDate;
+                }
+                
+                const todayEvs = events.filter(e => isDateInRange(targetDateStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
+                const dateLabel = (targetDateStr === getTodayString()) ? 'วันนี้' : `วันที่ ${formatThaiDate(targetDateStr)}`;
                 
                 if (todayEvs.length > 0) {
-                    previewHtml = `<div class="text-[10px] font-bold text-indigo-600 mb-1 flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3 h-3"></i> พบ ${todayEvs.length} กิจกรรมในวันนี้:</div>`;
+                    previewHtml = `<div class="text-[10px] font-bold text-indigo-600 mb-1 flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3 h-3"></i> พบ ${todayEvs.length} กิจกรรมใน${dateLabel}:</div>`;
                     previewHtml += `<div class="flex flex-col gap-1.5 max-h-40 overflow-y-auto pr-1">`;
                     todayEvs.forEach(ev => {
                         previewHtml += `
@@ -1736,7 +1745,7 @@
                     });
                     previewHtml += `</div>`;
                 } else {
-                    previewHtml = `<div class="text-xs text-rose-500 font-bold bg-rose-50 p-2.5 rounded border border-rose-100 flex items-center gap-1.5"><i data-lucide="info" class="w-4 h-4"></i> ไม่มีกิจกรรมใดๆ ในวันนี้</div>`;
+                    previewHtml = `<div class="text-xs text-rose-500 font-bold bg-rose-50 p-2.5 rounded border border-rose-100 flex items-center gap-1.5"><i data-lucide="info" class="w-4 h-4"></i> ไม่มีกิจกรรมใดๆ ใน${dateLabel}</div>`;
                 }
             } else if (evId) {
                 const ev = events.find(e => e.id === evId);
@@ -1777,6 +1786,7 @@
             } else if (mode === 'before_event') {
                 document.getElementById('task-schedule-before-ui').classList.remove('hidden');
             }
+            window.updateTaskEventPreview();
         };
 
         window.saveEmailTask = async () => {
@@ -1802,6 +1812,12 @@
             const scheduleHours = document.getElementById('task-schedule-before-hours').value;
             const scheduleMins = document.getElementById('task-schedule-before-mins').value;
 
+            // 🌟 ตั้งค่า targetDateStr ตาม scheduleMode 🌟
+            let targetDateStr = getTodayString();
+            if (scheduleMode === 'specific_time' && scheduleDate) {
+                targetDateStr = scheduleDate;
+            }
+
             // Check before_event restrictions
             if (scheduleMode === 'before_event') {
                 if (!eventId) {
@@ -1809,10 +1825,9 @@
                     return;
                 }
                 if (eventId === 'TODAY_EVENTS') {
-                    const todayStr = getTodayString();
-                    const todayEvs = events.filter(e => isDateInRange(todayStr, e.date, e.endDate));
+                    const todayEvs = events.filter(e => isDateInRange(targetDateStr, e.date, e.endDate));
                     if (todayEvs.length !== 1) {
-                        showToast("การส่งล่วงหน้าก่อนเริ่ม สำหรับ 'กิจกรรมของวันนี้' รองรับเฉพาะกรณีที่มีเพียง 1 กิจกรรมเท่านั้น", true);
+                        showToast(`การส่งล่วงหน้าก่อนเริ่ม สำหรับ 'กิจกรรมของวันนี้' รองรับเฉพาะกรณีที่มีเพียง 1 กิจกรรมในวันที่ ${formatThaiDate(targetDateStr)} เท่านั้น`, true);
                         return;
                     }
                 }
@@ -1832,12 +1847,11 @@
             let todayEvsForPayload = [];
 
             if (eventId === 'TODAY_EVENTS') {
-                const todayStr = getTodayString();
-                todayEvsForPayload = events.filter(e => isDateInRange(todayStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
-                // ถ้าไม่มีกิจกรรมวันนี้ และ ไม่มีข้อความเพิ่มเติม = ไม่ส่ง
+                todayEvsForPayload = events.filter(e => isDateInRange(targetDateStr, e.date, e.endDate)).sort((a,b) => a.time.localeCompare(b.time));
+                // ถ้าไม่มีกิจกรรม และ ไม่มีข้อความเพิ่มเติม = ไม่ส่ง
                 if (todayEvsForPayload.length === 0 && !message.trim()) {
                     isCancelled = true;
-                    cancelReason = "ไม่มีกิจกรรมในวันนี้ และไม่ได้ระบุข้อความเพิ่มเติม";
+                    cancelReason = `ไม่มีกิจกรรมในวันที่กำหนด (${formatThaiDate(targetDateStr)}) และไม่ได้ระบุข้อความเพิ่มเติม`;
                 }
             }
 
@@ -1849,8 +1863,8 @@
                 let startIso = `${firstEv.date}T${t}+07:00`;
                 
                 eventPayload = {
-                    title: todayEvsForPayload.length === 1 ? firstEv.title : `นัดหมายกิจกรรมวันนี้ (${todayEvsForPayload.length} รายการ)`,
-                    dateStr: formatThaiDate(firstEv.date),
+                    title: todayEvsForPayload.length === 1 ? firstEv.title : `นัดหมายกิจกรรม (${todayEvsForPayload.length} รายการ)`,
+                    dateStr: formatThaiDate(targetDateStr),
                     timeStr: todayEvsForPayload.map(e => e.time + (e.endTime ? ` - ${e.endTime}` : '')).join(', '),
                     desc: todayEvsForPayload.map(e => `[${e.time} น.] ${e.title}\n${e.description || ''}`).join('\n\n'),
                     links: todayEvsForPayload.flatMap(e => (e.links || []).filter(l => !isLinkLocked(l, e.date))),
@@ -1999,7 +2013,7 @@
                     if(h > 0 || d > 0) timeStr += `${h} ชม. `;
                     timeStr += `${m} นาที ${s} วินาที`;
                     
-                    el.innerHTML = `<i data-lucide="timer" class="w-3.5 h-3.5 text-slate-400 animate-pulse"></i> จะส่งในอีก ${timeStr}`;
+                    el.innerHTML = `<i data-lucide="timer" class="w-3.5 h-3.5 text-slate-400"></i> จะส่งในอีก ${timeStr}`;
                     if(window.lucide) window.lucide.createIcons({root: el});
                 }
             });
@@ -2047,7 +2061,7 @@
                 
                 actionsEl.innerHTML = `
                     <button onclick="closeSyncModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">ปิดหน้าต่าง</button>
-                    <button id="btn-stop-sync" onclick="stopSyncAll()" class="flex-1 py-2.5 bg-rose-500 text-white rounded-xl text-xs font-bold hover:bg-rose-600 transition-colors shadow-sm flex justify-center items-center gap-1.5"><i data-lucide="trash-2" class="w-4 h-4 hidden" id="stop-sync-icon"></i> <span>ยกเลิกการซิงก์</span></button>
+                    <button id="btn-stop-sync" onclick="window.stopSyncAll()" class="flex-1 py-2.5 bg-rose-500 text-white rounded-xl text-xs font-bold hover:bg-rose-600 transition-colors shadow-sm flex justify-center items-center gap-1.5"><i data-lucide="trash-2" class="w-4 h-4 hidden" id="stop-sync-icon"></i> <span>ยกเลิกการซิงก์</span></button>
                 `;
             } else {
                 titleEl.innerText = "ซิงค์กับ Google Calendar";
@@ -2151,7 +2165,7 @@
                 localStorage.setItem('morana_recent_colors', JSON.stringify(recentColors));
             }
 
-            if (hex && !exportColors[hex]) { exportColors[hex] = { bg: hex }; }
+            // no need to modify exportColors since we removed dependency
         };
 
         function renderRecentColors() {
@@ -3018,15 +3032,16 @@
                         let textStyle = `color: #64748b; font-weight: 600; font-size: ${fontSize}px;`;
 
                         if (dayEvs.length > 0) {
-                            const c = safeColor(dayEvs[0].color);
+                            // 🌟 แก้ไข: ดึงสีตรงๆ ไม่ผ่าน exportColors 🌟
+                            const hexColor = getHexColor(dayEvs[0].color);
                             const isActiveOnPage = activeDatesSet.has(dayStr);
 
                             if (isActiveOnPage) {
-                                innerStyle += ` background-color: ${exportColors[c].bg}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`;
+                                innerStyle += ` background-color: ${hexColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`;
                                 textStyle = `color: white; font-weight: 800; font-size: ${fontSize}px;`;
                             } else {
-                                innerStyle += ` background-color: ${exportColors[c].bg}20; border: 1px dashed ${exportColors[c].bg}40;`;
-                                textStyle = `color: ${exportColors[c].bg}; font-weight: 400; font-size: ${fontSize}px; opacity: 0.3;`;
+                                innerStyle += ` background-color: ${hexColor}20; border: 1px dashed ${hexColor}40;`;
+                                textStyle = `color: ${hexColor}; font-weight: 400; font-size: ${fontSize}px; opacity: 0.3;`;
                             }
                         }
 
@@ -3043,7 +3058,8 @@
 
                 const renderEventHtmlEx = (e, modeParam) => {
                     let descHtml = '';
-                    const c = safeColor(e.color);
+                    // 🌟 แก้ไข: ดึงสีตรงๆ ไม่ผ่าน exportColors 🌟
+                    const hexColor = getHexColor(e.color);
                     const dateStrDisplay = (e.endDate && e.endDate !== e.date)
                         ? `${e.date.split('-').reverse().join('/')} ถึง ${e.endDate.split('-').reverse().join('/')}`
                         : e.date.split('-').reverse().join('/');
@@ -3058,14 +3074,14 @@
                             if (desc.length > 150) { desc = desc.substring(0, 150); isTruncated = true; }
                         }
 
-                        let moreText = isTruncated ? '... <span style="color: ' + exportColors[c].bg + '; font-weight: bold;">(อ่านต่อในเว็บไซต์)</span>' : '';
+                        let moreText = isTruncated ? `... <span style="color: ${hexColor}; font-weight: bold;">(อ่านต่อในเว็บไซต์)</span>` : '';
                         descHtml = `<div style="font-size: 12px; color: #475569; line-height: 1.5; white-space: pre-wrap; margin-top: 4px; word-break: break-word;">${escapeHTML(desc)}${moreText}</div>`;
                     }
 
                     const timeStrDisplay = e.time + (e.endTime ? ` - ${e.endTime}` : '');
 
                     return `
-                    <div style="margin-bottom: ${modeParam === 'full' ? '16px' : '10px'}; border-left: 4px solid ${exportColors[c].bg}; padding-left: 12px; page-break-inside: avoid; width: 100%; box-sizing: border-box;">
+                    <div style="margin-bottom: ${modeParam === 'full' ? '16px' : '10px'}; border-left: 4px solid ${hexColor}; padding-left: 12px; page-break-inside: avoid; width: 100%; box-sizing: border-box;">
                         <div style="font-size: 12px; color: #64748b; font-weight: 800; margin-bottom: 2px;">${timeStrDisplay} น. (${dateStrDisplay})</div>
                         <div style="font-weight: 800; font-size: 16px; color: #1e293b; line-height: 1.2; word-break: break-word;">${escapeHTML(e.title)}</div>
                         ${descHtml}
